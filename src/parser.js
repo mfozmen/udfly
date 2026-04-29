@@ -8,15 +8,29 @@ export async function parseUDF(arrayBuffer) {
 
   const root = doc.documentElement;
   const text = readTopLevelCData(root);
+  const properties = readPageFormat(root);
   const styleMap = buildStyleMap(root);
   const elements = parseElements(root, text, styleMap);
 
   return {
     text,
     pages: 1,
-    properties: {},
+    properties,
     elements,
   };
+}
+
+function readPageFormat(root) {
+  const props = firstChild(root, "properties");
+  if (!props) return {};
+  const pageFormat = firstChild(props, "pageFormat");
+  if (!pageFormat) return {};
+  const out = {};
+  for (const attr of pageFormat.attributes) {
+    const numeric = Number(attr.value);
+    out[attr.name] = Number.isFinite(numeric) ? numeric : attr.value;
+  }
+  return out;
 }
 
 function parseElements(root, cdata, styleMap) {
