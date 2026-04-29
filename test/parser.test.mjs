@@ -45,6 +45,25 @@ test("parseUDF returns elements with at least one paragraph", async () => {
   );
 });
 
+test("parseUDF exposes pageFormat attributes via properties", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  assert.equal(typeof result.properties, "object");
+  // Margins in fixture 1 (the application form):
+  //   leftMargin="56.69291305541992", topMargin="28.34645652770996"
+  // Numbers are kept as numbers, not strings.
+  assert.equal(typeof result.properties.leftMargin, "number");
+  assert.ok(
+    result.properties.leftMargin > 56 && result.properties.leftMargin < 57,
+    `leftMargin should be ~56.69, got ${result.properties.leftMargin}`
+  );
+  assert.ok(
+    result.properties.topMargin > 28 && result.properties.topMargin < 29,
+    `topMargin should be ~28.35, got ${result.properties.topMargin}`
+  );
+  assert.equal(result.properties.paperOrientation, 1);
+});
+
 test("parseUDF parses header and footer wrappers with paragraph children", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
