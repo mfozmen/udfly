@@ -24,11 +24,41 @@ function parseElements(root, cdata) {
 
   const out = [];
   for (const node of container.children) {
-    if (node.tagName === "paragraph") {
-      out.push(parseParagraph(node, cdata));
-    }
+    const parsed = parseElementNode(node, cdata);
+    if (parsed) out.push(parsed);
   }
   return out;
+}
+
+function parseElementNode(node, cdata) {
+  switch (node.tagName) {
+    case "paragraph":
+      return parseParagraph(node, cdata);
+    case "table":
+      return parseTable(node, cdata);
+    default:
+      return null;
+  }
+}
+
+function parseTable(node, cdata) {
+  const rows = [];
+  for (const rowNode of node.children) {
+    if (rowNode.tagName !== "row") continue;
+    const cells = [];
+    for (const cellNode of rowNode.children) {
+      if (cellNode.tagName !== "cell") continue;
+      const paragraphs = [];
+      for (const cellChild of cellNode.children) {
+        if (cellChild.tagName === "paragraph") {
+          paragraphs.push(parseParagraph(cellChild, cdata));
+        }
+      }
+      cells.push(paragraphs);
+    }
+    rows.push(cells);
+  }
+  return { type: "table", rows };
 }
 
 function parseParagraph(node, cdata) {
