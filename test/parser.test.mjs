@@ -83,6 +83,34 @@ test("parseUDF populates runs with offset-sliced text and bold style", async () 
   assert.ok(boldRuns.length > 0, "at least one run should be bold");
 });
 
+test("parseUDF normalizes underline, fontSize, and alignment from fixture data", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  const runs = paragraphs.flatMap((p) => p.runs);
+
+  // The fixture contains underline="true" on at least one run.
+  assert.ok(
+    runs.some((r) => r.style.underline === true),
+    "expected at least one underlined run"
+  );
+
+  // size="11" and size="12" both appear; both should normalize to fontSize numbers.
+  const sizes = new Set(
+    runs.map((r) => r.style.fontSize).filter((n) => typeof n === "number")
+  );
+  assert.ok(sizes.has(11) || sizes.has(12), "expected fontSize 11 or 12 on runs");
+
+  // Alignment="0" (left), "1" (center), and "3" (justify) all occur on paragraphs.
+  const alignments = new Set(
+    paragraphs.map((p) => p.style.alignment).filter((n) => typeof n === "number")
+  );
+  assert.ok(
+    alignments.has(0) && alignments.has(1) && alignments.has(3),
+    `expected alignments 0, 1, and 3 to be present, got ${[...alignments].join(",")}`
+  );
+});
+
 test("parseUDF resolves the resolver chain into paragraph and run styles", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
