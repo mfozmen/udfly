@@ -8,7 +8,8 @@ export async function parseUDF(arrayBuffer) {
 
   const root = doc.documentElement;
   const text = readTopLevelCData(root);
-  const elements = parseElements(root, text);
+  const styleMap = buildStyleMap(root);
+  const elements = parseElements(root, text, styleMap);
 
   return {
     text,
@@ -18,30 +19,30 @@ export async function parseUDF(arrayBuffer) {
   };
 }
 
-function parseElements(root, cdata) {
+function parseElements(root, cdata, styleMap) {
   const container = firstChild(root, "elements");
   if (!container) return [];
 
   const out = [];
   for (const node of container.children) {
-    const parsed = parseElementNode(node, cdata);
+    const parsed = parseElementNode(node, cdata, styleMap);
     if (parsed) out.push(parsed);
   }
   return out;
 }
 
-function parseElementNode(node, cdata) {
+function parseElementNode(node, cdata, styleMap) {
   switch (node.tagName) {
     case "paragraph":
-      return parseParagraph(node, cdata);
+      return parseParagraph(node, cdata, styleMap);
     case "table":
-      return parseTable(node, cdata);
+      return parseTable(node, cdata, styleMap);
     default:
       return null;
   }
 }
 
-function parseTable(node, cdata) {
+function parseTable(node, cdata, styleMap) {
   const rows = [];
   for (const rowNode of node.children) {
     if (rowNode.tagName !== "row") continue;
@@ -51,7 +52,7 @@ function parseTable(node, cdata) {
       const paragraphs = [];
       for (const cellChild of cellNode.children) {
         if (cellChild.tagName === "paragraph") {
-          paragraphs.push(parseParagraph(cellChild, cdata));
+          paragraphs.push(parseParagraph(cellChild, cdata, styleMap));
         }
       }
       cells.push(paragraphs);
@@ -61,25 +62,28 @@ function parseTable(node, cdata) {
   return { type: "table", rows };
 }
 
-function parseParagraph(node, cdata) {
-  const style = readStyleAttrs(node);
+function parseParagraph(node, cdata, styleMap) {
+  const resolved = resolveAttrs(attrsOf(node), styleMap);
+  const style = normalizeStyle(resolved);
   const runs = [];
   for (const child of node.children) {
     const tag = child.tagName;
     if (tag === "content" || tag === "space" || tag === "field") {
-      runs.push(parseRun(child, tag, cdata));
+      runs.push(parseRun(child, tag, cdata, styleMap, resolved));
     }
   }
   return { type: "paragraph", style, runs };
 }
 
-function parseRun(node, kind, cdata) {
+function parseRun(node, kind, cdata, styleMap, parentResolved) {
   const start = parseIntAttr(node, "startOffset", 0);
   const length = parseIntAttr(node, "length", 0);
+  const ownResolved = resolveAttrs(attrsOf(node), styleMap);
+  const merged = { ...parentResolved, ...ownResolved };
   const run = {
     text: cdata.substring(start, start + length),
     kind,
-    style: readStyleAttrs(node),
+    style: normalizeStyle(merged),
   };
   if (kind === "field") {
     const name = node.getAttribute("fieldName");
@@ -88,9 +92,45 @@ function parseRun(node, kind, cdata) {
   return run;
 }
 
-function readStyleAttrs(node) {
+function buildStyleMap(root) {
+  const map = new Map();
+  const stylesNode = firstChild(root, "styles");
+  if (!stylesNode) return map;
+  for (const styleNode of stylesNode.children) {
+    if (styleNode.tagName !== "style") continue;
+    const name = styleNode.getAttribute("name");
+    if (!name) continue;
+    map.set(name, attrsOf(styleNode));
+  }
+  return map;
+}
+
+function attrsOf(node) {
+  const out = {};
+  for (const attr of node.attributes) {
+    out[attr.name] = attr.value;
+  }
+  return out;
+}
+
+function resolveAttrs(ownAttrs, styleMap, seen = new Set()) {
+  const resolverName = ownAttrs.resolver;
+  let base = {};
+  if (resolverName && !seen.has(resolverName)) {
+    const styleAttrs = styleMap.get(resolverName);
+    if (styleAttrs) {
+      const next = new Set(seen);
+      next.add(resolverName);
+      base = resolveAttrs(styleAttrs, styleMap, next);
+    }
+  }
+  return { ...base, ...ownAttrs };
+}
+
+function normalizeStyle(attrs) {
   const style = {};
-  if (node.getAttribute("bold") === "true") style.bold = true;
+  if (attrs.bold === "true") style.bold = true;
+  if (attrs.family) style.fontFamily = attrs.family;
   return style;
 }
 
