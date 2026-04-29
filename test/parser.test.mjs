@@ -8,7 +8,7 @@ import { JSDOM } from "jsdom";
 const { window } = new JSDOM();
 globalThis.DOMParser = window.DOMParser;
 
-const { parseUDF } = await import("../src/parser.js");
+const { parseUDF, colorIntToRgb } = await import("../src/parser.js");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, "..", "samples", "fixtures");
@@ -81,6 +81,17 @@ test("parseUDF populates runs with offset-sliced text and bold style", async () 
   );
   const boldRuns = allRuns.filter((r) => r.style && r.style.bold === true);
   assert.ok(boldRuns.length > 0, "at least one run should be bold");
+});
+
+test("colorIntToRgb converts Java signed 32-bit ARGB ints to rgb() strings", () => {
+  // -16777216 == 0xFF000000 (opaque black)
+  assert.equal(colorIntToRgb(-16777216), "rgb(0, 0, 0)");
+  // -13421773 == 0xFF333333 (dark gray; the "default" style's foreground in fixture 1)
+  assert.equal(colorIntToRgb(-13421773), "rgb(51, 51, 51)");
+  // -1 == 0xFFFFFFFF (opaque white)
+  assert.equal(colorIntToRgb(-1), "rgb(255, 255, 255)");
+  // Positive value still parses correctly: 16711680 == 0x00FF0000 (alpha 0, red 255)
+  assert.equal(colorIntToRgb(16711680), "rgb(255, 0, 0)");
 });
 
 test("parseUDF normalizes underline, fontSize, and alignment from fixture data", async () => {
