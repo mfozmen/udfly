@@ -11,13 +11,28 @@ export async function parseUDF(arrayBuffer) {
   const properties = readPageFormat(root);
   const styleMap = buildStyleMap(root);
   const elements = parseElements(root, text, styleMap);
+  const verificationCode = await readVerificationCode(zip);
 
-  return {
-    text,
-    pages: 1,
-    properties,
-    elements,
-  };
+  const result = { text, pages: 1, properties, elements };
+  if (verificationCode) result.verificationCode = verificationCode;
+  return result;
+}
+
+async function readVerificationCode(zip) {
+  const file = zip.file("documentproperties.xml");
+  if (!file) return undefined;
+  let xml = await file.async("string");
+  if (xml.charCodeAt(0) === 0xfeff) xml = xml.slice(1);
+  // Java properties XML carries a DOCTYPE that DOMParser parses fine. Match
+  // <entry key="uyapdogrulamakodu">VALUE</entry> case-sensitively per UYAP.
+  const doc = new DOMParser().parseFromString(xml, "application/xml");
+  if (doc.querySelector("parsererror")) return undefined;
+  for (const entry of doc.getElementsByTagName("entry")) {
+    if (entry.getAttribute("key") === "uyapdogrulamakodu") {
+      return entry.textContent.trim() || undefined;
+    }
+  }
+  return undefined;
 }
 
 function readPageFormat(root) {
