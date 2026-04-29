@@ -130,8 +130,19 @@ function resolveAttrs(ownAttrs, styleMap, seen = new Set()) {
 function normalizeStyle(attrs) {
   const style = {};
   if (attrs.bold === "true") style.bold = true;
+  if (attrs.underline === "true") style.underline = true;
   if (attrs.family) style.fontFamily = attrs.family;
+  const fontSize = parseNumeric(attrs.size);
+  if (fontSize != null) style.fontSize = fontSize;
+  const alignment = parseNumeric(attrs.Alignment);
+  if (alignment != null) style.alignment = alignment;
   return style;
+}
+
+function parseNumeric(raw) {
+  if (raw == null || raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 function parseIntAttr(node, name, fallback) {
