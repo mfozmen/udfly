@@ -136,7 +136,21 @@ function normalizeStyle(attrs) {
   if (fontSize != null) style.fontSize = fontSize;
   const alignment = parseNumeric(attrs.Alignment);
   if (alignment != null) style.alignment = alignment;
+  if (attrs.foreground != null) {
+    const n = parseInt(attrs.foreground, 10);
+    if (!Number.isNaN(n)) style.color = colorIntToRgb(n);
+  }
   return style;
+}
+
+export function colorIntToRgb(n) {
+  // Java signed 32-bit int → ARGB. Use unsigned shifts so negatives are
+  // interpreted as 0xFFnnnnnn. The high byte is alpha; we ignore it for now
+  // and emit opaque rgb(r, g, b).
+  const r = (n >>> 16) & 0xff;
+  const g = (n >>> 8) & 0xff;
+  const b = n & 0xff;
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 function parseNumeric(raw) {
