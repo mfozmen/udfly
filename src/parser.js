@@ -8,7 +8,7 @@ export async function parseUDF(arrayBuffer) {
 
   const root = doc.documentElement;
   const text = readTopLevelCData(root);
-  const elements = parseElements(root);
+  const elements = parseElements(root, text);
 
   return {
     text,
@@ -18,21 +18,57 @@ export async function parseUDF(arrayBuffer) {
   };
 }
 
-function parseElements(root) {
+function parseElements(root, cdata) {
   const container = firstChild(root, "elements");
   if (!container) return [];
 
   const out = [];
   for (const node of container.children) {
     if (node.tagName === "paragraph") {
-      out.push(parseParagraph(node));
+      out.push(parseParagraph(node, cdata));
     }
   }
   return out;
 }
 
-function parseParagraph(node) {
-  return { type: "paragraph", style: {}, runs: [] };
+function parseParagraph(node, cdata) {
+  const style = readStyleAttrs(node);
+  const runs = [];
+  for (const child of node.children) {
+    const tag = child.tagName;
+    if (tag === "content" || tag === "space" || tag === "field") {
+      runs.push(parseRun(child, tag, cdata));
+    }
+  }
+  return { type: "paragraph", style, runs };
+}
+
+function parseRun(node, kind, cdata) {
+  const start = parseIntAttr(node, "startOffset", 0);
+  const length = parseIntAttr(node, "length", 0);
+  const run = {
+    text: cdata.substring(start, start + length),
+    kind,
+    style: readStyleAttrs(node),
+  };
+  if (kind === "field") {
+    const name = node.getAttribute("fieldName");
+    if (name) run.fieldName = name;
+  }
+  return run;
+}
+
+function readStyleAttrs(node) {
+  const style = {};
+  if (node.getAttribute("bold") === "true") style.bold = true;
+  return style;
+}
+
+function parseIntAttr(node, name, fallback) {
+  const raw = node.getAttribute(name);
+  if (raw == null || raw === "") return fallback;
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? fallback : n;
 }
 
 function firstChild(parent, tagName) {
