@@ -82,3 +82,26 @@ test("parseUDF populates runs with offset-sliced text and bold style", async () 
   const boldRuns = allRuns.filter((r) => r.style && r.style.bold === true);
   assert.ok(boldRuns.length > 0, "at least one run should be bold");
 });
+
+test("parseUDF resolves the resolver chain into paragraph and run styles", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  // Many paragraphs in this fixture declare resolver="edf_1456817714676",
+  // which itself resolves to "hvl-default" with family="Times New Roman".
+  // After the chain is flattened, those paragraphs must inherit the family.
+  const inherited = paragraphs.filter(
+    (p) => p.style.fontFamily === "Times New Roman"
+  );
+  assert.ok(
+    inherited.length > 0,
+    "expected at least one paragraph to inherit fontFamily=Times New Roman via resolver chain"
+  );
+  // Element-own attributes still win over the resolved chain — no paragraph
+  // in the fixture overrides family with anything other than Times New Roman
+  // or Arial, so the inherited set should be the dominant one.
+  assert.ok(
+    inherited.length >= paragraphs.length / 2,
+    "resolver chain should populate fontFamily on most paragraphs"
+  );
+});
