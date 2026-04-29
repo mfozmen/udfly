@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "UDF Viewer",
   "version": "0.1.0",
   "identifier": "com.udfviewer.app",
   "build": {
@@ -10,9 +10,12 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "tauri-app",
-        "width": 800,
-        "height": 600
+        "title": "UDF Viewer",
+        "width": 1100,
+        "height": 800,
+        "minWidth": 600,
+        "minHeight": 400,
+        "resizable": true
       }
     ],
     "security": {
@@ -28,6 +31,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["udf"],
+        "name": "UDF Document",
+        "description": "UYAP Universal Document Format",
+        "mimeType": "application/x-udf",
+        "role": "Viewer"
+      }
     ]
   }
 }
