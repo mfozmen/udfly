@@ -8,13 +8,38 @@ export async function parseUDF(arrayBuffer) {
 
   const root = doc.documentElement;
   const text = readTopLevelCData(root);
+  const elements = parseElements(root);
 
   return {
     text,
     pages: 1,
     properties: {},
-    elements: [],
+    elements,
   };
+}
+
+function parseElements(root) {
+  const container = firstChild(root, "elements");
+  if (!container) return [];
+
+  const out = [];
+  for (const node of container.children) {
+    if (node.tagName === "paragraph") {
+      out.push(parseParagraph(node));
+    }
+  }
+  return out;
+}
+
+function parseParagraph(node) {
+  return { type: "paragraph", style: {}, runs: [] };
+}
+
+function firstChild(parent, tagName) {
+  for (const c of parent.children) {
+    if (c.tagName === tagName) return c;
+  }
+  return null;
 }
 
 async function loadZip(arrayBuffer) {
