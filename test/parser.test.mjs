@@ -81,6 +81,22 @@ test("parseUDF parses header and footer wrappers with paragraph children", async
   );
 });
 
+test("parseUDF reads verificationCode from documentproperties.xml when present", async () => {
+  const tableBuffer = await loadFixture("fixture-mediation-form-with-table.udf");
+  const tableResult = await parseUDF(tableBuffer);
+  assert.equal(
+    tableResult.verificationCode,
+    "AA000000",
+    "second fixture's UYAP verification code should be exposed"
+  );
+
+  // The first fixture has no documentproperties.xml at all → undefined,
+  // not null and not "".
+  const appBuffer = await loadFixture("fixture-mediation-application.udf");
+  const appResult = await parseUDF(appBuffer);
+  assert.equal(appResult.verificationCode, undefined);
+});
+
 test("parseUDF parses table → row → cell → paragraph nesting", async () => {
   const buffer = await loadFixture("fixture-mediation-form-with-table.udf");
   const result = await parseUDF(buffer);
