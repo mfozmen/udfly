@@ -56,17 +56,6 @@ Concrete rules:
 - Squash-merge by default. Keeps `main` history clean. Exception: when a feature legitimately consists of multiple independent commits worth preserving (rare).
 - After merge, delete the branch locally and on remote.
 
-### 3.1. Automated PR review
-
-Once Stage 3 is complete, every PR automatically receives a review comment from Anthropic's official `claude-code-action` (configured in `.github/workflows/claude-review.yml`). It checks PRs against the rules in this file and the format spec in `CLAUDE_CODE_BRIEF.md`.
-
-Treat its feedback as a useful second opinion, not as ground truth:
-
-- If it flags something legitimate, fix it in a new commit on the same branch.
-- If you disagree, push back in a PR comment with reasoning. Don't suppress the bot.
-- Bot review never replaces human review — branch protection still requires a human approval before merge.
-- Don't game the bot by writing prompts to make it pass. The CLAUDE.md rules are the real standard.
-
 ### 4. Conventional Commits
 
 Every commit message follows the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) spec:
