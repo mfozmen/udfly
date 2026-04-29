@@ -45,6 +45,25 @@ test("parseUDF returns elements with at least one paragraph", async () => {
   );
 });
 
+test("parseUDF parses table → row → cell → paragraph nesting", async () => {
+  const buffer = await loadFixture("fixture-mediation-form-with-table.udf");
+  const result = await parseUDF(buffer);
+  const tables = result.elements.filter((e) => e.type === "table");
+  assert.ok(tables.length > 0, "second fixture should contain at least one table");
+  const firstTable = tables[0];
+  assert.ok(Array.isArray(firstTable.rows), "table.rows should be an array");
+  assert.ok(firstTable.rows.length > 0, "table should have at least one row");
+  const firstRow = firstTable.rows[0];
+  assert.ok(Array.isArray(firstRow), "row should be an array of cells");
+  assert.ok(firstRow.length > 0, "row should have at least one cell");
+  const firstCell = firstRow[0];
+  assert.ok(Array.isArray(firstCell), "cell should be an array of paragraphs");
+  assert.ok(
+    firstCell.every((p) => p.type === "paragraph"),
+    "cell entries should all be paragraph nodes"
+  );
+});
+
 test("parseUDF populates runs with offset-sliced text and bold style", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
