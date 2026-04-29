@@ -37,9 +37,23 @@ function parseElementNode(node, cdata, styleMap) {
       return parseParagraph(node, cdata, styleMap);
     case "table":
       return parseTable(node, cdata, styleMap);
+    case "header":
+      return { type: "header", paragraphs: collectParagraphs(node, cdata, styleMap) };
+    case "footer":
+      return { type: "footer", paragraphs: collectParagraphs(node, cdata, styleMap) };
     default:
       return null;
   }
+}
+
+function collectParagraphs(node, cdata, styleMap) {
+  const paragraphs = [];
+  for (const child of node.children) {
+    if (child.tagName === "paragraph") {
+      paragraphs.push(parseParagraph(child, cdata, styleMap));
+    }
+  }
+  return paragraphs;
 }
 
 function parseTable(node, cdata, styleMap) {
