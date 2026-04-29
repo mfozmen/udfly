@@ -45,6 +45,23 @@ test("parseUDF returns elements with at least one paragraph", async () => {
   );
 });
 
+test("parseUDF parses header and footer wrappers with paragraph children", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const headers = result.elements.filter((e) => e.type === "header");
+  const footers = result.elements.filter((e) => e.type === "footer");
+  assert.ok(headers.length > 0, "fixture should declare at least one header");
+  assert.ok(footers.length > 0, "fixture should declare at least one footer");
+  assert.ok(
+    headers[0].paragraphs.every((p) => p.type === "paragraph"),
+    "header.paragraphs entries should all be paragraphs"
+  );
+  assert.ok(
+    footers[0].paragraphs.every((p) => p.type === "paragraph"),
+    "footer.paragraphs entries should all be paragraphs"
+  );
+});
+
 test("parseUDF parses table → row → cell → paragraph nesting", async () => {
   const buffer = await loadFixture("fixture-mediation-form-with-table.udf");
   const result = await parseUDF(buffer);
