@@ -44,3 +44,22 @@ test("parseUDF returns elements with at least one paragraph", async () => {
     "should have at least one paragraph element"
   );
 });
+
+test("parseUDF populates runs with offset-sliced text and bold style", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const allRuns = result.elements
+    .filter((e) => e.type === "paragraph")
+    .flatMap((e) => e.runs);
+  assert.ok(allRuns.length > 0, "expected runs across paragraphs");
+  assert.ok(
+    allRuns.every((r) => typeof r.text === "string"),
+    "every run should have text"
+  );
+  assert.ok(
+    allRuns.every((r) => r.kind === "content" || r.kind === "space" || r.kind === "field"),
+    "every run should declare its kind"
+  );
+  const boldRuns = allRuns.filter((r) => r.style && r.style.bold === true);
+  assert.ok(boldRuns.length > 0, "at least one run should be bold");
+});
