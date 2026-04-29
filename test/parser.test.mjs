@@ -32,3 +32,15 @@ test("parseUDF extracts CDATA text containing Turkish keywords", async () => {
     "text should contain BAŞVURU"
   );
 });
+
+test("parseUDF returns elements with at least one paragraph", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  assert.ok(Array.isArray(result.elements), "elements should be an array");
+  assert.ok(result.elements.length > 0, "elements should be non-empty");
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  assert.ok(
+    paragraphs.length > 0,
+    "should have at least one paragraph element"
+  );
+});
