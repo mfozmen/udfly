@@ -397,66 +397,7 @@ Set up release distribution.
    - Steps: checkout, install Node + Rust + platform deps, npm ci, run npm test, build with tauri-action
    - Use tauri-apps/tauri-action@v0 to build and create a GitHub Release with all platform artifacts attached
 
-3. .github/workflows/claude-review.yml — Automated PR review using Anthropic's official Claude Code GitHub Action.
-
-   Setup approach: Tell the user (Tugra) to run `/install-github-app` from their local Claude Code terminal — this is the easiest setup path. It installs the Claude GitHub App on the repo, adds the necessary secret (`ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN`), and creates an initial workflow file via PR.
-   
-   After that PR is merged, replace or augment the auto-generated workflow with this configuration:
-
-   ```yaml
-   name: Claude Code Review
-
-   on:
-     pull_request:
-       types: [opened, synchronize]
-
-   permissions:
-     contents: read
-     pull-requests: write
-     issues: read
-
-   jobs:
-     review:
-       runs-on: ubuntu-latest
-       # Don't review our own bot commits or dependabot to avoid noise/loops
-       if: |
-         github.actor != 'claude[bot]' &&
-         github.actor != 'dependabot[bot]' &&
-         github.actor != 'github-actions[bot]'
-       steps:
-         - uses: actions/checkout@v4
-           with:
-             fetch-depth: 0
-         - uses: anthropics/claude-code-action@v1
-           with:
-             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-             prompt: |
-               Review this PR against the standards in CLAUDE.md and the relevant
-               stage of CLAUDE_CODE_BRIEF.md. Focus on:
-               
-               1. TDD compliance — does every behavior change have a test?
-                  Were tests added BEFORE the implementation (look at commit order)?
-               2. Conventional Commits — are commit messages well-formed?
-               3. Stage discipline — does this PR stay within the announced stage?
-               4. UDF parser correctness — if this touches src/parser.js, verify
-                  the change matches the format spec in CLAUDE_CODE_BRIEF.md.
-                  Check edge cases: negative Java int colors, CDATA whitespace
-                  preservation, style resolver chain, missing optional files.
-               5. Code style — vanilla JS only, no frameworks, semicolons, no emoji.
-               6. UI/UX — for any UI change, is the design minimal and professional?
-                  No emoji, no playful copy, sentence case.
-               
-               Skip nitpicks. Be direct. If the PR is good, say so plainly.
-               If something is wrong, point to the exact file and line.
-   ```
-
-   Notes:
-   - The official action handles posting review comments directly on the PR.
-   - Mention in the README that this is enabled and that PRs from forks may not have access to the API key (standard GitHub Actions security).
-   - This action is purely advisory — it does not block merging. Human review is still required (as enforced by branch protection in Stage 0).
-   - Do NOT use anthropics/claude-code-security-review unless we explicitly add it later. The general-purpose review action is enough for our needs.
-
-4. README.md:
+3. README.md:
    - Project intro (English): what it is, why it exists, who it's for
    - Screenshot placeholder (can be added later)
    - Installation: download from releases page, run executable
@@ -467,11 +408,11 @@ Set up release distribution.
    - Contributing: PRs welcome, especially test files for edge cases (with sensitive info redacted)
    - License: MIT
 
-5. LICENSE: MIT.
+4. LICENSE: MIT.
 
-6. .gitignore: already created in Stage 0. Verify it still excludes `samples/private/` and that no real UDFs have been accidentally committed (`git log --all --full-history -- samples/private/` should show only README changes).
+5. .gitignore: already created in Stage 0. Verify it still excludes `samples/private/` and that no real UDFs have been accidentally committed (`git log --all --full-history -- samples/private/` should show only README changes).
 
-7. CHANGELOG.md: start with v0.1.0 entry listing initial features.
+6. CHANGELOG.md: start with v0.1.0 entry listing initial features.
 
 Verify by tagging v0.1.0 locally and pushing — confirm CI builds pass on all 3 platforms.
 ```
