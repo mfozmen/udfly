@@ -146,6 +146,48 @@ test("colorIntToRgb converts Java signed 32-bit ARGB ints to rgb() strings", () 
   assert.equal(colorIntToRgb(16711680), "rgb(255, 0, 0)");
 });
 
+test("parseUDF normalizes paragraph indent and spacing attributes", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const topLevelParagraphs = result.elements.filter((e) => e.type === "paragraph");
+  const headerParagraphs = result.elements
+    .filter((e) => e.type === "header")
+    .flatMap((h) => h.paragraphs);
+  const allParagraphs = [...topLevelParagraphs, ...headerParagraphs];
+
+  // SpaceAbove=1.0 is set as an own attr on most top-level paragraphs.
+  assert.ok(
+    topLevelParagraphs.some((p) => p.style.spaceAbove === 1),
+    "expected paragraph with own spaceAbove=1"
+  );
+  // SpaceAbove=2.0 is set on the header's paragraph; it lands in
+  // header.paragraphs not the top-level list.
+  assert.ok(
+    headerParagraphs.some((p) => p.style.spaceAbove === 2),
+    "expected header paragraph with spaceAbove=2"
+  );
+
+  // Manual half-spacing on body paragraphs.
+  assert.ok(
+    topLevelParagraphs.some((p) => p.style.lineSpacing === 0.5),
+    "expected paragraphs with lineSpacing=0.5"
+  );
+
+  // The trailing styled paragraphs use LeftIndent=3.0.
+  assert.ok(
+    allParagraphs.some((p) => p.style.leftIndent === 3),
+    "expected paragraph with leftIndent=3"
+  );
+
+  // TabSet kept verbatim.
+  assert.ok(
+    allParagraphs.some(
+      (p) => typeof p.style.tabSet === "string" && p.style.tabSet.includes(":")
+    ),
+    "expected paragraph with a tabSet string"
+  );
+});
+
 test("parseUDF normalizes underline, fontSize, and alignment from fixture data", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
