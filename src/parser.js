@@ -183,7 +183,20 @@ function normalizeStyle(attrs) {
     const n = parseInt(attrs.foreground, 10);
     if (!Number.isNaN(n)) style.color = colorIntToRgb(n);
   }
+  assignNumeric(style, "leftIndent", attrs.LeftIndent);
+  assignNumeric(style, "rightIndent", attrs.RightIndent);
+  assignNumeric(style, "firstLineIndent", attrs.FirstLineIndent);
+  assignNumeric(style, "hanging", attrs.Hanging);
+  assignNumeric(style, "spaceAbove", attrs.SpaceAbove);
+  assignNumeric(style, "spaceBelow", attrs.SpaceBelow);
+  assignNumeric(style, "lineSpacing", attrs.LineSpacing);
+  if (attrs.TabSet) style.tabSet = attrs.TabSet;
   return style;
+}
+
+function assignNumeric(target, key, raw) {
+  const n = parseNumeric(raw);
+  if (n != null) target[key] = n;
 }
 
 export function colorIntToRgb(n) {
