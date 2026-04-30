@@ -188,31 +188,43 @@ test("parseUDF normalizes paragraph indent and spacing attributes", async () => 
   );
 });
 
-test("parseUDF normalizes underline, fontSize, and alignment from fixture data", async () => {
+test("parseUDF normalizes underline=\"true\" into run.style.underline", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
-  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
-  const runs = paragraphs.flatMap((p) => p.runs);
-
-  // The fixture contains underline="true" on at least one run.
+  const runs = result.elements
+    .filter((e) => e.type === "paragraph")
+    .flatMap((p) => p.runs);
   assert.ok(
     runs.some((r) => r.style.underline === true),
     "expected at least one underlined run"
   );
+});
 
-  // size="11" and size="12" both appear; both should normalize to fontSize numbers.
+test("parseUDF normalizes size attribute into run.style.fontSize as a number", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const runs = result.elements
+    .filter((e) => e.type === "paragraph")
+    .flatMap((p) => p.runs);
   const sizes = new Set(
     runs.map((r) => r.style.fontSize).filter((n) => typeof n === "number")
   );
-  assert.ok(sizes.has(11) || sizes.has(12), "expected fontSize 11 or 12 on runs");
+  assert.ok(
+    sizes.has(11) || sizes.has(12),
+    `expected fontSize 11 or 12 on runs, got: ${[...sizes].join(",")}`
+  );
+});
 
-  // Alignment="0" (left), "1" (center), and "3" (justify) all occur on paragraphs.
+test("parseUDF normalizes Alignment attribute into paragraph.style.alignment", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
   const alignments = new Set(
     paragraphs.map((p) => p.style.alignment).filter((n) => typeof n === "number")
   );
   assert.ok(
     alignments.has(0) && alignments.has(1) && alignments.has(3),
-    `expected alignments 0, 1, and 3 to be present, got ${[...alignments].join(",")}`
+    `expected alignments 0, 1, and 3 to all be present, got: ${[...alignments].join(",")}`
   );
 });
 
