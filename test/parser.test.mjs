@@ -228,6 +228,28 @@ test("parseUDF normalizes Alignment attribute into paragraph.style.alignment", a
   );
 });
 
+test("parseUDF lets parent paragraph's own attrs win over a run's resolver chain", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  // Fixture has paragraphs with own Alignment="1" containing a single run
+  // whose resolver chain (edf_1456817714676) carries Alignment="0". The
+  // brief's cascade — "run inherits parent paragraph's resolved style, then
+  // overlays its own attrs" — means the run should keep alignment=1 from the
+  // parent's own override; the run's chain must not silently overwrite it.
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  const centered = paragraphs.find(
+    (p) => p.style.alignment === 1 && p.runs.length > 0
+  );
+  assert.ok(centered, "fixture should contain a centered paragraph");
+  for (const run of centered.runs) {
+    assert.equal(
+      run.style.alignment,
+      1,
+      "run should inherit alignment=1 from parent, not be overwritten by its own chain"
+    );
+  }
+});
+
 test("parseUDF resolves the resolver chain into paragraph and run styles", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
