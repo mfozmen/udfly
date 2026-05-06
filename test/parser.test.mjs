@@ -1,0 +1,320 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { JSDOM } from "jsdom";
+
+const { window } = new JSDOM();
+globalThis.DOMParser = window.DOMParser;
+
+const { parseUDF, colorIntToRgb } = await import("../src/parser.js");
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fixturesDir = path.join(__dirname, "..", "samples", "fixtures");
+
+async function loadFixture(name) {
+  const file = await readFile(path.join(fixturesDir, name));
+  return file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
+}
+
+test("parseUDF extracts CDATA text containing Turkish keywords", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  assert.ok(typeof result.text === "string", "text should be a string");
+  assert.ok(result.text.length > 0, "text should be non-empty");
+  assert.ok(
+    result.text.includes("ARABULUCULUK"),
+    "text should contain ARABULUCULUK"
+  );
+  assert.ok(
+    result.text.includes("BAŞVURU"),
+    "text should contain BAŞVURU"
+  );
+});
+
+test("parseUDF returns elements with at least one paragraph", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  assert.ok(Array.isArray(result.elements), "elements should be an array");
+  assert.ok(result.elements.length > 0, "elements should be non-empty");
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  assert.ok(
+    paragraphs.length > 0,
+    "should have at least one paragraph element"
+  );
+});
+
+test("parseUDF exposes pageFormat attributes via properties", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  assert.equal(typeof result.properties, "object");
+  // Margins in fixture 1 (the application form):
+  //   leftMargin="56.69291305541992", topMargin="28.34645652770996"
+  // Numbers are kept as numbers, not strings.
+  assert.equal(typeof result.properties.leftMargin, "number");
+  assert.ok(
+    result.properties.leftMargin > 56 && result.properties.leftMargin < 57,
+    `leftMargin should be ~56.69, got ${result.properties.leftMargin}`
+  );
+  assert.ok(
+    result.properties.topMargin > 28 && result.properties.topMargin < 29,
+    `topMargin should be ~28.35, got ${result.properties.topMargin}`
+  );
+  assert.equal(result.properties.paperOrientation, 1);
+});
+
+test("parseUDF parses header and footer wrappers with paragraph children", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const headers = result.elements.filter((e) => e.type === "header");
+  const footers = result.elements.filter((e) => e.type === "footer");
+  assert.ok(headers.length > 0, "fixture should declare at least one header");
+  assert.ok(footers.length > 0, "fixture should declare at least one footer");
+  assert.ok(
+    headers[0].paragraphs.every((p) => p.type === "paragraph"),
+    "header.paragraphs entries should all be paragraphs"
+  );
+  assert.ok(
+    footers[0].paragraphs.every((p) => p.type === "paragraph"),
+    "footer.paragraphs entries should all be paragraphs"
+  );
+});
+
+test("parseUDF reads verificationCode from documentproperties.xml when present", async () => {
+  const tableBuffer = await loadFixture("fixture-mediation-form-with-table.udf");
+  const tableResult = await parseUDF(tableBuffer);
+  assert.equal(
+    tableResult.verificationCode,
+    "AA000000",
+    "second fixture's UYAP verification code should be exposed"
+  );
+
+  // The first fixture has no documentproperties.xml at all → undefined,
+  // not null and not "".
+  const appBuffer = await loadFixture("fixture-mediation-application.udf");
+  const appResult = await parseUDF(appBuffer);
+  assert.equal(appResult.verificationCode, undefined);
+});
+
+test("parseUDF parses table → row → cell → paragraph nesting", async () => {
+  const buffer = await loadFixture("fixture-mediation-form-with-table.udf");
+  const result = await parseUDF(buffer);
+  const tables = result.elements.filter((e) => e.type === "table");
+  assert.ok(tables.length > 0, "second fixture should contain at least one table");
+  const firstTable = tables[0];
+  assert.ok(Array.isArray(firstTable.rows), "table.rows should be an array");
+  assert.ok(firstTable.rows.length > 0, "table should have at least one row");
+  const firstRow = firstTable.rows[0];
+  assert.ok(Array.isArray(firstRow), "row should be an array of cells");
+  assert.ok(firstRow.length > 0, "row should have at least one cell");
+  const firstCell = firstRow[0];
+  assert.ok(Array.isArray(firstCell), "cell should be an array of paragraphs");
+  assert.ok(
+    firstCell.every((p) => p.type === "paragraph"),
+    "cell entries should all be paragraph nodes"
+  );
+});
+
+test("parseUDF populates runs with offset-sliced text and bold style", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const allRuns = result.elements
+    .filter((e) => e.type === "paragraph")
+    .flatMap((e) => e.runs);
+  assert.ok(allRuns.length > 0, "expected runs across paragraphs");
+  assert.ok(
+    allRuns.every((r) => typeof r.text === "string"),
+    "every run should have text"
+  );
+  assert.ok(
+    allRuns.every((r) => r.kind === "content" || r.kind === "space" || r.kind === "field"),
+    "every run should declare its kind"
+  );
+  const boldRuns = allRuns.filter((r) => r.style && r.style.bold === true);
+  assert.ok(boldRuns.length > 0, "at least one run should be bold");
+});
+
+test("colorIntToRgb converts Java signed 32-bit ARGB ints to rgb() strings", () => {
+  // -16777216 == 0xFF000000 (opaque black)
+  assert.equal(colorIntToRgb(-16777216), "rgb(0, 0, 0)");
+  // -13421773 == 0xFF333333 (dark gray; the "default" style's foreground in fixture 1)
+  assert.equal(colorIntToRgb(-13421773), "rgb(51, 51, 51)");
+  // -1 == 0xFFFFFFFF (opaque white)
+  assert.equal(colorIntToRgb(-1), "rgb(255, 255, 255)");
+  // Positive value still parses correctly: 16711680 == 0x00FF0000 (alpha 0, red 255)
+  assert.equal(colorIntToRgb(16711680), "rgb(255, 0, 0)");
+});
+
+test("parseUDF normalizes SpaceAbove on top-level paragraphs as a number", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const topLevelParagraphs = result.elements.filter((e) => e.type === "paragraph");
+  // SpaceAbove=1.0 is set as an own attr on most top-level body paragraphs.
+  assert.ok(
+    topLevelParagraphs.some((p) => p.style.spaceAbove === 1),
+    "expected at least one top-level paragraph with own spaceAbove=1"
+  );
+});
+
+test("parseUDF inherits SpaceAbove from the resolver chain on header paragraphs", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const headerParagraphs = result.elements
+    .filter((e) => e.type === "header")
+    .flatMap((h) => h.paragraphs);
+  // SpaceAbove=2.0 lives on the header's paragraph (and is not overridden
+  // there, unlike top-level paragraphs which all set their own 1.0).
+  assert.ok(
+    headerParagraphs.some((p) => p.style.spaceAbove === 2),
+    "expected header paragraph with spaceAbove=2"
+  );
+});
+
+test("parseUDF normalizes LineSpacing into paragraph.style.lineSpacing", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  // Manual half-spacing on body paragraphs.
+  assert.ok(
+    paragraphs.some((p) => p.style.lineSpacing === 0.5),
+    "expected at least one paragraph with lineSpacing=0.5"
+  );
+});
+
+test("parseUDF normalizes LeftIndent into paragraph.style.leftIndent", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const allParagraphs = [
+    ...result.elements.filter((e) => e.type === "paragraph"),
+    ...result.elements.filter((e) => e.type === "header").flatMap((h) => h.paragraphs),
+  ];
+  // The trailing styled paragraphs use LeftIndent=3.0.
+  assert.ok(
+    allParagraphs.some((p) => p.style.leftIndent === 3),
+    "expected at least one paragraph with leftIndent=3"
+  );
+});
+
+test("parseUDF preserves TabSet verbatim on paragraph.style.tabSet", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const allParagraphs = [
+    ...result.elements.filter((e) => e.type === "paragraph"),
+    ...result.elements.filter((e) => e.type === "header").flatMap((h) => h.paragraphs),
+  ];
+  assert.ok(
+    allParagraphs.some(
+      (p) => typeof p.style.tabSet === "string" && p.style.tabSet.includes(":")
+    ),
+    "expected at least one paragraph with a tabSet string"
+  );
+});
+
+test("parseUDF normalizes underline=\"true\" into run.style.underline", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const runs = result.elements
+    .filter((e) => e.type === "paragraph")
+    .flatMap((p) => p.runs);
+  assert.ok(
+    runs.some((r) => r.style.underline === true),
+    "expected at least one underlined run"
+  );
+});
+
+test("parseUDF normalizes size attribute into run.style.fontSize as a number", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const runs = result.elements
+    .filter((e) => e.type === "paragraph")
+    .flatMap((p) => p.runs);
+  const sizes = new Set(
+    runs.map((r) => r.style.fontSize).filter((n) => typeof n === "number")
+  );
+  assert.ok(
+    sizes.has(11) || sizes.has(12),
+    `expected fontSize 11 or 12 on runs, got: ${[...sizes].join(",")}`
+  );
+});
+
+test("parseUDF normalizes Alignment attribute into paragraph.style.alignment", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  const alignments = new Set(
+    paragraphs.map((p) => p.style.alignment).filter((n) => typeof n === "number")
+  );
+  assert.ok(
+    alignments.has(0) && alignments.has(1) && alignments.has(3),
+    `expected alignments 0, 1, and 3 to all be present, got: ${[...alignments].join(",")}`
+  );
+});
+
+test("parseUDF lets a run's own literal attrs win over the parent paragraph's resolved style", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  // Fixture has paragraphs like:
+  //   <paragraph LineSpacing="0.5" Alignment="3" resolver="hvl-default">
+  //     <content size="11" startOffset="71" length="50" />
+  //   </paragraph>
+  // The paragraph inherits fontSize=12 from hvl-default's chain (no own size
+  // override), and the run sets its own size=11. The run's literal attr must
+  // win over the parent's resolved fontSize. This guards the other direction
+  // of the cascade from regression.
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  const candidate = paragraphs.find(
+    (p) =>
+      p.style.fontSize === 12 &&
+      p.runs.some((r) => r.style.fontSize === 11)
+  );
+  assert.ok(
+    candidate,
+    "fixture should have a paragraph with chain fontSize=12 containing a run with own fontSize=11"
+  );
+});
+
+test("parseUDF lets parent paragraph's own attrs win over a run's resolver chain", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  // Fixture has paragraphs with own Alignment="1" containing a single run
+  // whose resolver chain (edf_1456817714676) carries Alignment="0". The
+  // brief's cascade — "run inherits parent paragraph's resolved style, then
+  // overlays its own attrs" — means the run should keep alignment=1 from the
+  // parent's own override; the run's chain must not silently overwrite it.
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  const centered = paragraphs.find(
+    (p) => p.style.alignment === 1 && p.runs.length > 0
+  );
+  assert.ok(centered, "fixture should contain a centered paragraph");
+  for (const run of centered.runs) {
+    assert.equal(
+      run.style.alignment,
+      1,
+      "run should inherit alignment=1 from parent, not be overwritten by its own chain"
+    );
+  }
+});
+
+test("parseUDF resolves the resolver chain into paragraph and run styles", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  // Many paragraphs in this fixture declare resolver="edf_1456817714676",
+  // which itself resolves to "hvl-default" with family="Times New Roman".
+  // After the chain is flattened, those paragraphs must inherit the family.
+  const inherited = paragraphs.filter(
+    (p) => p.style.fontFamily === "Times New Roman"
+  );
+  assert.ok(
+    inherited.length > 0,
+    "expected at least one paragraph to inherit fontFamily=Times New Roman via resolver chain"
+  );
+  // Element-own attributes still win over the resolved chain — no paragraph
+  // in the fixture overrides family with anything other than Times New Roman
+  // or Arial, so the inherited set should be the dominant one.
+  assert.ok(
+    inherited.length >= paragraphs.length / 2,
+    "resolver chain should populate fontFamily on most paragraphs"
+  );
+});
