@@ -251,6 +251,29 @@ test("parseUDF normalizes Alignment attribute into paragraph.style.alignment", a
   );
 });
 
+test("parseUDF lets a run's own literal attrs win over the parent paragraph's resolved style", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const result = await parseUDF(buffer);
+  // Fixture has paragraphs like:
+  //   <paragraph LineSpacing="0.5" Alignment="3" resolver="hvl-default">
+  //     <content size="11" startOffset="71" length="50" />
+  //   </paragraph>
+  // The paragraph inherits fontSize=12 from hvl-default's chain (no own size
+  // override), and the run sets its own size=11. The run's literal attr must
+  // win over the parent's resolved fontSize. This guards the other direction
+  // of the cascade from regression.
+  const paragraphs = result.elements.filter((e) => e.type === "paragraph");
+  const candidate = paragraphs.find(
+    (p) =>
+      p.style.fontSize === 12 &&
+      p.runs.some((r) => r.style.fontSize === 11)
+  );
+  assert.ok(
+    candidate,
+    "fixture should have a paragraph with chain fontSize=12 containing a run with own fontSize=11"
+  );
+});
+
 test("parseUDF lets parent paragraph's own attrs win over a run's resolver chain", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const result = await parseUDF(buffer);
