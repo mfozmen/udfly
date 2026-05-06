@@ -121,15 +121,22 @@ function parseParagraph(node, cdata, styleMap) {
 function parseRun(node, kind, cdata, styleMap, parentResolved) {
   const start = parseIntAttr(node, "startOffset", 0);
   const length = parseIntAttr(node, "length", 0);
-  const ownResolved = resolveAttrs(attrsOf(node), styleMap);
-  const merged = { ...parentResolved, ...ownResolved };
+  const ownLiteral = attrsOf(node);
+  // Cascade per the brief: run inherits parent paragraph's resolved style,
+  // then overlays its own attrs. The run's own resolver chain (if any) sits
+  // BELOW the parent's resolved as a weaker base — it can fill gaps the
+  // parent doesn't cover but must not override the parent's own attributes.
+  const runChainBases = ownLiteral.resolver
+    ? resolveAttrs({ resolver: ownLiteral.resolver }, styleMap)
+    : {};
+  const merged = { ...runChainBases, ...parentResolved, ...ownLiteral };
   const run = {
     text: cdata.substring(start, start + length),
     kind,
     style: normalizeStyle(merged),
   };
   if (kind === "field") {
-    const name = node.getAttribute("fieldName");
+    const name = ownLiteral.fieldName;
     if (name) run.fieldName = name;
   }
   return run;
