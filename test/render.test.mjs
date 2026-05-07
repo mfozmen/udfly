@@ -291,6 +291,26 @@ test("renderToHTML applies leftIndent as inline margin-left in pt", async () => 
   );
 });
 
+test("renderToHTML emits &nbsp; placeholder for whitespace-only paragraphs", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: {},
+        runs: [
+          { text: "  \n\t", kind: "content", style: {} },
+          { text: "   ", kind: "space", style: {} },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.match(html, /<p[^>]*>&nbsp;<\/p>/);
+});
+
 test("renderToHTML emits &nbsp; placeholder for paragraphs with no runs", () => {
   const parsed = {
     text: "",
