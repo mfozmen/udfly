@@ -15,6 +15,8 @@ function renderElement(element) {
       return renderTable(element);
     case "header":
       return renderWrapper("udf-header", element.paragraphs);
+    case "footer":
+      return renderWrapper("udf-footer", element.paragraphs);
     default:
       return "";
   }
