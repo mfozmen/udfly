@@ -291,6 +291,15 @@ test("renderToHTML applies leftIndent as inline margin-left in pt", async () => 
   );
 });
 
+test("renderToHTML renders tables with .udf-table class and tr/td nesting", async () => {
+  const buffer = await loadFixture("fixture-mediation-form-with-table.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  assert.ok(/<table[^>]*class="udf-table"[^>]*>/.test(html), "expected <table class=\"udf-table\">");
+  assert.ok(/<tr[\s>]/.test(html), "expected <tr>");
+  assert.ok(/<td[\s>]/.test(html), "expected <td>");
+});
+
 test("renderToHTML applies alignment as inline text-align on the paragraph", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
