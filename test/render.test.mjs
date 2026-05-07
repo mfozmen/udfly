@@ -43,6 +43,52 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML strips Unicode line terminators from fontFamily values", () => {
+  // Beyond ASCII \r and \n, three Unicode chars are sometimes treated as
+  // line terminators by browser-quirk parsers: U+0085 (NEL), U+2028 (LS),
+  // U+2029 (PS). The CSS3 spec doesn't list them, but stripping them is
+  // cheap defense-in-depth against parser implementation quirks.
+  const attacks = [
+    "Times" + String.fromCharCode(0x0085) + "rest",
+    "Arial" + String.fromCharCode(0x2028) + "rest",
+    "Times" + String.fromCharCode(0x2029) + "rest",
+  ];
+  for (const attack of attacks) {
+    const parsed = {
+      text: "",
+      pages: 1,
+      properties: {},
+      elements: [
+        {
+          type: "paragraph",
+          style: {},
+          runs: [
+            { text: "x", kind: "content", style: { fontFamily: attack } },
+          ],
+        },
+      ],
+    };
+    const html = renderToHTML(parsed);
+    const dom = new JSDOM(`<!DOCTYPE html><body>${html}</body>`);
+    const span = dom.window.document.querySelector("span");
+    const styleAttr = span.getAttribute("style") || "";
+    const familyMatch = styleAttr.match(/font-family:\s*'([^']*)'/);
+    assert.ok(
+      familyMatch,
+      `font-family should be present for input ${JSON.stringify(attack)}`
+    );
+    const stripped = familyMatch[1];
+    const hasLineTerminator =
+      stripped.includes(String.fromCharCode(0x0085)) ||
+      stripped.includes(String.fromCharCode(0x2028)) ||
+      stripped.includes(String.fromCharCode(0x2029));
+    assert.ok(
+      !hasLineTerminator,
+      `family value for input ${JSON.stringify(attack)} should have Unicode line terminators stripped; got ${JSON.stringify(stripped)}`
+    );
+  }
+});
+
 test("renderToHTML strips CSS-injection vectors from fontFamily values", () => {
   // Hostile UDFs could ship family="..." with CSS-special chars that break
   // out of the single-quoted CSS string (newline ends declaration; backslash
