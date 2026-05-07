@@ -43,6 +43,18 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML applies fontFamily as inline font-family on run spans", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  // Loose check: the family name appears in a font-family declaration.
+  // Quoting style is exercised by the next cycle.
+  assert.ok(
+    /<span[^>]*font-family:[^>]*Times New Roman[^>]*>/.test(html),
+    "expected span with font-family containing Times New Roman"
+  );
+});
+
 test("renderToHTML applies color as inline color on the run span", () => {
   const parsed = {
     text: "",
