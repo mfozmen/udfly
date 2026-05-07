@@ -2,18 +2,72 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UDF Viewer</title>
-    <script type="module" src="/main.js" defer></script>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./main.js" defer></script>
   </head>
 
   <body>
-    <main class="landing">
-      <div class="landing__card">
-        <h1 class="landing__title">UDF Viewer</h1>
-        <p class="landing__hint">Drop a .udf file here</p>
+    <header class="topbar">
+      <h1 class="topbar__title">UDF Viewer</h1>
+      <div class="topbar__filename" id="filename" aria-live="polite"></div>
+      <div class="topbar__actions">
+        <button
+          class="btn"
+          id="print-btn"
+          type="button"
+          disabled
+          aria-keyshortcuts="Control+P"
+        >
+          Print
+        </button>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+      <section class="state state--empty" id="empty-state" aria-label="No document">
+        <div class="state__card state__card--dropzone">
+          <p class="state__title">Drop a .udf file here</p>
+          <p class="state__hint">or use the file association from your OS</p>
+        </div>
+      </section>
+
+      <section
+        class="state state--page"
+        id="page-view"
+        aria-label="Document"
+        hidden
+      >
+        <article class="page" id="page"></article>
+      </section>
+
+      <section
+        class="state state--error"
+        id="error-state"
+        aria-label="Error"
+        hidden
+      >
+        <div class="state__card state__card--error">
+          <h2 class="state__title">Couldn't open this file</h2>
+          <p class="state__message" id="error-message"></p>
+          <button class="btn" id="error-retry" type="button">
+            Try another file
+          </button>
+        </div>
+      </section>
+
+      <div class="dropoverlay" id="dropoverlay" aria-hidden="true">
+        <div class="dropoverlay__inner">Release to open</div>
       </div>
     </main>
+
+    <footer class="statusbar" aria-label="Document properties">
+      <span class="statusbar__item" id="pages-info">—</span>
+      <span class="statusbar__sep" aria-hidden="true">•</span>
+      <span class="statusbar__item" id="size-info">—</span>
+      <span class="statusbar__sep" aria-hidden="true">•</span>
+      <span class="statusbar__item" id="verification-info">—</span>
+    </footer>
   </body>
 </html>
