@@ -27,7 +27,7 @@ function runStyle(style) {
     parts.push(`font-size: ${style.fontSize}pt`);
   }
   if (style.color) parts.push(`color: ${style.color}`);
-  if (style.fontFamily) parts.push(`font-family: ${style.fontFamily}`);
+  if (style.fontFamily) parts.push(`font-family: '${style.fontFamily}'`);
   return parts.join("; ");
 }
 
