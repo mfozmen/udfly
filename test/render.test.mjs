@@ -206,6 +206,16 @@ test("renderToHTML emits each run as a <span>", async () => {
   assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
 });
 
+test("renderToHTML applies alignment as inline text-align on the paragraph", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  assert.ok(
+    /<p[^>]*text-align:\s*(?:center|justify)[^>]*>/.test(html),
+    "expected paragraph with text-align center or justify"
+  );
+});
+
 test("renderToHTML emits each paragraph as a <p>", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
