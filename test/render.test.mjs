@@ -206,6 +206,20 @@ test("renderToHTML emits each run as a <span>", async () => {
   assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
 });
 
+test("renderToHTML sets white-space: pre-wrap on every paragraph", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  const paragraphCount = (html.match(/<p[\s>]/g) || []).length;
+  const preWrapCount = (html.match(/white-space:\s*pre-wrap/g) || []).length;
+  assert.ok(paragraphCount > 0, "should have rendered paragraphs");
+  assert.equal(
+    preWrapCount,
+    paragraphCount,
+    `every paragraph should carry white-space: pre-wrap (have ${preWrapCount}/${paragraphCount})`
+  );
+});
+
 test("renderToHTML applies lineSpacing as inline line-height multiplier", () => {
   const parsed = {
     text: "",
