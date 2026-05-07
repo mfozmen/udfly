@@ -22,6 +22,7 @@ function renderRun(run) {
 function runStyle(style) {
   const parts = [];
   if (style.bold) parts.push("font-weight: bold");
+  if (style.underline) parts.push("text-decoration: underline");
   return parts.join("; ");
 }
 
