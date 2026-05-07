@@ -99,9 +99,11 @@ window.addEventListener("dragover", (e) => {
   e.preventDefault();
 });
 window.addEventListener("dragleave", () => {
-  dragDepth -= 1;
-  if (dragDepth <= 0) {
-    dragDepth = 0;
+  // Drags originating inside the WebView (e.g., text selection drags) emit
+  // dragleave on window without a matching dragenter, so guard the decrement
+  // to keep the depth from going negative and desyncing future overlays.
+  if (dragDepth > 0) dragDepth -= 1;
+  if (dragDepth === 0) {
     els.dropoverlay.classList.remove("dropoverlay--active");
   }
 });
