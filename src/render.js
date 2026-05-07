@@ -13,9 +13,16 @@ function renderElement(element) {
       return renderParagraph(element);
     case "table":
       return renderTable(element);
+    case "header":
+      return renderWrapper("udf-header", element.paragraphs);
     default:
       return "";
   }
+}
+
+function renderWrapper(className, paragraphs) {
+  const inner = paragraphs.map(renderParagraph).join("");
+  return `<div class="${className}">${inner}</div>`;
 }
 
 function renderTable(table) {
