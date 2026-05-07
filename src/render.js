@@ -43,9 +43,12 @@ function renderTable(table) {
 }
 
 function renderParagraph(p) {
-  const inner = p.runs.map(renderRun).join("");
   const css = paragraphStyle(p.style);
   const attr = css ? ` style="${css}"` : "";
+  if (p.runs.length === 0) {
+    return `<p${attr}>&nbsp;</p>`;
+  }
+  const inner = p.runs.map(renderRun).join("");
   return `<p${attr}>${inner}</p>`;
 }
 
