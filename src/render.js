@@ -27,8 +27,18 @@ function runStyle(style) {
     parts.push(`font-size: ${style.fontSize}pt`);
   }
   if (style.color) parts.push(`color: ${style.color}`);
-  if (style.fontFamily) parts.push(`font-family: '${style.fontFamily}'`);
+  if (style.fontFamily) {
+    parts.push(`font-family: '${sanitizeFontFamily(style.fontFamily)}'`);
+  }
   return parts.join("; ");
+}
+
+function sanitizeFontFamily(value) {
+  // Defense-in-depth against CSS / HTML-attribute injection from a hostile
+  // UDF. Strip ASCII control chars and CSS/HTML-special chars that could
+  // break out of the single-quoted CSS string or the surrounding double-
+  // quoted style attribute. Real font names don't need any of these.
+  return value.replace(/[\r\n\t\\'"<>]/g, "");
 }
 
 function escapeHtml(s) {
