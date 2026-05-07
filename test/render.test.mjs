@@ -206,6 +206,23 @@ test("renderToHTML emits each run as a <span>", async () => {
   assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
 });
 
+test("renderToHTML applies spaceBelow as inline margin-bottom in pt", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: { spaceBelow: 6 },
+        runs: [{ text: "x", kind: "content", style: {} }],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(/<p[^>]*margin-bottom:\s*6pt[^>]*>/.test(html), "expected margin-bottom: 6pt");
+});
+
 test("renderToHTML applies spaceAbove as inline margin-top in pt", () => {
   const parsed = {
     text: "",
