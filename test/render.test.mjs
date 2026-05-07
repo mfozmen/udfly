@@ -43,6 +43,16 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML applies bold as inline font-weight on the run span", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  assert.ok(
+    /<span[^>]*font-weight:\s*bold[^>]*>/.test(html),
+    "expected at least one span with font-weight: bold"
+  );
+});
+
 test("renderToHTML emits each run as a <span>", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
