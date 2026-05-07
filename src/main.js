@@ -40,9 +40,12 @@ function setStatus({ pages, sizeBytes, verificationCode }) {
 // renderToHTML's output is the only sanitization layer that matters: it
 // HTML-escapes text, single-quotes / strips fontFamily, and validates color
 // against the rgb shape. innerHTML and createContextualFragment + replace-
-// Children parse trusted HTML identically — the choice between them is not
-// a security distinction. We use createContextualFragment because tooling
-// flags innerHTML and the rewrite cost is one helper.
+// Children parse trusted HTML identically; the parser, not the API choice,
+// is what makes the output safe. Routing through createContextualFragment
+// keeps a single, reviewable seam between trusted-HTML producer (renderer)
+// and the DOM, so any future change can be audited at this seam alone —
+// reverting to innerHTML would still be safe today but would erase that
+// seam and let raw-HTML insertion drift back into the codebase elsewhere.
 function paintPage(html) {
   const range = document.createRange();
   range.selectNodeContents(els.page);
