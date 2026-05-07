@@ -114,12 +114,16 @@ function isRgbColor(value) {
   return /^rgb\(\d{1,3}, \d{1,3}, \d{1,3}\)$/.test(value);
 }
 
+// Strip CSS/HTML-special characters and Unicode line terminators a hostile
+// UDF could use to break out of the single-quoted CSS string or the
+// surrounding double-quoted style attribute. Built via RegExp() with \u
+// escapes because U+2028 / U+2029 in a regex literal would split the
+// regex across source-file lines and trigger a parse error.
+const FONT_FAMILY_STRIP =
+  new RegExp("[\\r\\n\\t\\\\'\"<>\\u0085\\u2028\\u2029]", "g");
+
 function sanitizeFontFamily(value) {
-  // Defense-in-depth against CSS / HTML-attribute injection from a hostile
-  // UDF. Strip ASCII control chars and CSS/HTML-special chars that could
-  // break out of the single-quoted CSS string or the surrounding double-
-  // quoted style attribute. Real font names don't need any of these.
-  return value.replace(/[\r\n\t\\'"<>]/g, "");
+  return value.replace(FONT_FAMILY_STRIP, "");
 }
 
 function escapeHtml(s) {
