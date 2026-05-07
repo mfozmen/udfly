@@ -26,6 +26,7 @@ function runStyle(style) {
   if (typeof style.fontSize === "number") {
     parts.push(`font-size: ${style.fontSize}pt`);
   }
+  if (style.color) parts.push(`color: ${style.color}`);
   return parts.join("; ");
 }
 
