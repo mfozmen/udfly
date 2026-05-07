@@ -51,6 +51,11 @@ function paintPage(html) {
 }
 
 function showError(message) {
+  // Reset chrome to "no document loaded" so the topbar filename and status
+  // bar can't contradict the error overlay (e.g., previous document's name
+  // sticking around after a non-.udf drop).
+  setFilename("");
+  setStatus({});
   els.errorMessage.textContent = message;
   showState("error");
   els.printBtn.disabled = true;
