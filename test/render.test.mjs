@@ -113,6 +113,36 @@ test("renderToHTML applies fontFamily as inline font-family on run spans", async
   );
 });
 
+test("renderToHTML drops malformed color values to prevent CSS injection", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: {},
+        runs: [
+          {
+            text: "x",
+            kind: "content",
+            style: { color: "red; font-weight: bold" },
+          },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(
+    !html.includes("font-weight: bold"),
+    "injected font-weight via color value should be dropped"
+  );
+  assert.ok(
+    !html.includes("color: red"),
+    "non-rgb color values should be dropped entirely"
+  );
+});
+
 test("renderToHTML applies color as inline color on the run span", () => {
   const parsed = {
     text: "",
