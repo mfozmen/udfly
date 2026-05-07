@@ -37,10 +37,12 @@ function setStatus({ pages, sizeBytes, verificationCode }) {
     : "—";
 }
 
-// renderToHTML's output is already HTML-escaped (text), single-quote-CSS-
-// safe (font-family), and rgb-shape-validated (color); the renderer is the
-// sanitizer. Use createContextualFragment to materialize the trusted string
-// as DOM nodes and replace the page's children, avoiding direct innerHTML.
+// renderToHTML's output is the only sanitization layer that matters: it
+// HTML-escapes text, single-quotes / strips fontFamily, and validates color
+// against the rgb shape. innerHTML and createContextualFragment + replace-
+// Children parse trusted HTML identically — the choice between them is not
+// a security distinction. We use createContextualFragment because tooling
+// flags innerHTML and the rewrite cost is one helper.
 function paintPage(html) {
   const range = document.createRange();
   range.selectNodeContents(els.page);
