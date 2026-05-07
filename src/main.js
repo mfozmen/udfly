@@ -98,9 +98,10 @@ function isUdfFile(file) {
   return file && /\.udf$/i.test(file.name);
 }
 
-// Drag-and-drop. The browser fires dragover continuously while a file is
-// over the window; we use it to keep the overlay shown. drop reads the
-// first .udf file from the dataTransfer.
+// Counting dragenter/dragleave (rather than tracking a single boolean
+// from dragover) lets the overlay stay visible while the cursor crosses
+// inner element boundaries — every entry into a child fires dragleave on
+// the parent, so a flag-based approach would flicker.
 let dragDepth = 0;
 window.addEventListener("dragenter", (e) => {
   e.preventDefault();
@@ -141,7 +142,6 @@ els.errorRetry.addEventListener("click", () => {
 });
 
 window.addEventListener("keydown", (e) => {
-  // Ctrl/Cmd+P → print (only when a document is loaded)
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
     if (!els.printBtn.disabled) {
       e.preventDefault();
@@ -150,5 +150,4 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// Initial state.
 showState("empty");
