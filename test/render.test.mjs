@@ -19,6 +19,13 @@ async function loadFixture(name) {
   return file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
 }
 
+test("renderToHTML emits each run as a <span>", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
+});
+
 test("renderToHTML emits each paragraph as a <p>", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
