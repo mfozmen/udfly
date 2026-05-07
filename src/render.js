@@ -28,6 +28,9 @@ function paragraphStyle(style) {
   if (typeof style.rightIndent === "number") {
     parts.push(`margin-right: ${style.rightIndent}pt`);
   }
+  if (typeof style.spaceAbove === "number") {
+    parts.push(`margin-top: ${style.spaceAbove}pt`);
+  }
   return parts.join("; ");
 }
 
