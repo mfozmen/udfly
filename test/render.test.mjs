@@ -43,6 +43,19 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML wraps fontFamily in single quotes so it doesn't break the HTML style attribute", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  // Multi-word font names like "Times New Roman" must be quoted in CSS.
+  // We use single quotes so the inner quote can't terminate the surrounding
+  // double-quoted style attribute and break HTML parsing.
+  assert.ok(
+    html.includes("font-family: 'Times New Roman'"),
+    "font-family should be wrapped in single quotes"
+  );
+});
+
 test("renderToHTML applies fontFamily as inline font-family on run spans", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
