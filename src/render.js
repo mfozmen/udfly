@@ -34,6 +34,9 @@ function paragraphStyle(style) {
   if (typeof style.spaceBelow === "number") {
     parts.push(`margin-bottom: ${style.spaceBelow}pt`);
   }
+  if (typeof style.lineSpacing === "number" && style.lineSpacing > 0) {
+    parts.push(`line-height: ${style.lineSpacing}`);
+  }
   return parts.join("; ");
 }
 
