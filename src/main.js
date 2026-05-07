@@ -1,5 +1,6 @@
 import { parseUDF } from "./parser.js";
 import { renderToHTML } from "./render.js";
+import { formatBytes } from "./format.js";
 
 const els = {
   filename: document.getElementById("filename"),
@@ -34,12 +35,6 @@ function setStatus({ pages, sizeBytes, verificationCode }) {
   els.verificationInfo.textContent = verificationCode
     ? `Verification: ${verificationCode}`
     : "—";
-}
-
-function formatBytes(n) {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // renderToHTML's output is already HTML-escaped (text), single-quote-CSS-
