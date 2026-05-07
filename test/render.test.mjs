@@ -206,6 +206,23 @@ test("renderToHTML emits each run as a <span>", async () => {
   assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
 });
 
+test("renderToHTML applies spaceAbove as inline margin-top in pt", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: { spaceAbove: 4 },
+        runs: [{ text: "x", kind: "content", style: {} }],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(/<p[^>]*margin-top:\s*4pt[^>]*>/.test(html), "expected margin-top: 4pt");
+});
+
 test("renderToHTML applies rightIndent as inline margin-right in pt", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
