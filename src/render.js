@@ -23,6 +23,9 @@ function runStyle(style) {
   const parts = [];
   if (style.bold) parts.push("font-weight: bold");
   if (style.underline) parts.push("text-decoration: underline");
+  if (typeof style.fontSize === "number") {
+    parts.push(`font-size: ${style.fontSize}pt`);
+  }
   return parts.join("; ");
 }
 
