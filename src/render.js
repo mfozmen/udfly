@@ -16,7 +16,8 @@ function renderParagraph(p) {
 }
 
 function paragraphStyle(style) {
-  const parts = [];
+  // white-space: pre-wrap is always on so tabs/newlines inside runs render.
+  const parts = ["white-space: pre-wrap"];
   if (typeof style.alignment === "number") {
     const map = { 0: "left", 1: "center", 2: "right", 3: "justify" };
     const value = map[style.alignment];
