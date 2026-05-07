@@ -45,11 +45,19 @@ function renderTable(table) {
 function renderParagraph(p) {
   const css = paragraphStyle(p.style);
   const attr = css ? ` style="${css}"` : "";
-  if (p.runs.length === 0) {
+  if (isEmpty(p)) {
     return `<p${attr}>&nbsp;</p>`;
   }
   const inner = p.runs.map(renderRun).join("");
   return `<p${attr}>${inner}</p>`;
+}
+
+function isEmpty(p) {
+  if (p.runs.length === 0) return true;
+  for (const run of p.runs) {
+    if (run.text && run.text.trim().length > 0) return false;
+  }
+  return true;
 }
 
 function paragraphStyle(style) {
