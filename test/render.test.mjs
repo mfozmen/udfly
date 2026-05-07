@@ -19,6 +19,30 @@ async function loadFixture(name) {
   return file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
 }
 
+test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: {},
+        runs: [
+          { text: "<script>alert('x')</script>", kind: "content", style: {} },
+          { text: "a & b", kind: "content", style: {} },
+          { text: 'attr="x"', kind: "content", style: {} },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(!/<script[\s>]/.test(html), "unescaped <script> must not appear");
+  assert.ok(html.includes("&lt;script&gt;"), "expected escaped <script>");
+  assert.ok(html.includes("a &amp; b"), "expected escaped &");
+  assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
+});
+
 test("renderToHTML emits each run as a <span>", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
