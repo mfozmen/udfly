@@ -43,6 +43,32 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML applies color as inline color on the run span", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: {},
+        runs: [
+          {
+            text: "x",
+            kind: "content",
+            style: { color: "rgb(255, 0, 0)" },
+          },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(
+    /<span[^>]*color:\s*rgb\(255,\s*0,\s*0\)[^>]*>/.test(html),
+    "expected span with color: rgb(255, 0, 0)"
+  );
+});
+
 test("renderToHTML applies fontSize as inline font-size in pt units", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
