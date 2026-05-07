@@ -1,11 +1,36 @@
 export function renderToHTML(parsed) {
   const parts = [];
   for (const element of parsed.elements) {
-    if (element.type === "paragraph") {
-      parts.push(renderParagraph(element));
-    }
+    const html = renderElement(element);
+    if (html) parts.push(html);
   }
   return parts.join("");
+}
+
+function renderElement(element) {
+  switch (element.type) {
+    case "paragraph":
+      return renderParagraph(element);
+    case "table":
+      return renderTable(element);
+    default:
+      return "";
+  }
+}
+
+function renderTable(table) {
+  const rows = table.rows
+    .map((cells) => {
+      const cellsHtml = cells
+        .map((paragraphs) => {
+          const inner = paragraphs.map(renderParagraph).join("");
+          return `<td>${inner}</td>`;
+        })
+        .join("");
+      return `<tr>${cellsHtml}</tr>`;
+    })
+    .join("");
+  return `<table class="udf-table">${rows}</table>`;
 }
 
 function renderParagraph(p) {
