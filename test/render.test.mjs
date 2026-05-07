@@ -206,6 +206,16 @@ test("renderToHTML emits each run as a <span>", async () => {
   assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
 });
 
+test("renderToHTML applies leftIndent as inline margin-left in pt", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  assert.ok(
+    /<p[^>]*margin-left:\s*3pt[^>]*>/.test(html),
+    "expected paragraph with margin-left: 3pt"
+  );
+});
+
 test("renderToHTML applies alignment as inline text-align on the paragraph", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
