@@ -206,6 +206,23 @@ test("renderToHTML emits each run as a <span>", async () => {
   assert.ok(/<span[\s>]/.test(html), "expected at least one <span> tag");
 });
 
+test("renderToHTML applies lineSpacing as inline line-height multiplier", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: { lineSpacing: 1.5 },
+        runs: [{ text: "x", kind: "content", style: {} }],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(/<p[^>]*line-height:\s*1\.5[^>]*>/.test(html), "expected line-height: 1.5");
+});
+
 test("renderToHTML applies spaceBelow as inline margin-bottom in pt", () => {
   const parsed = {
     text: "",
