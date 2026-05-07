@@ -37,15 +37,19 @@ function setStatus({ pages, sizeBytes, verificationCode }) {
     : "—";
 }
 
-// renderToHTML's output is the only sanitization layer that matters: it
-// HTML-escapes text, single-quotes / strips fontFamily, and validates color
-// against the rgb shape. innerHTML and createContextualFragment + replace-
-// Children parse trusted HTML identically; the parser, not the API choice,
-// is what makes the output safe. Routing through createContextualFragment
-// keeps a single, reviewable seam between trusted-HTML producer (renderer)
-// and the DOM, so any future change can be audited at this seam alone —
-// reverting to innerHTML would still be safe today but would erase that
-// seam and let raw-HTML insertion drift back into the codebase elsewhere.
+// Safety here comes from renderToHTML, not from the DOM API used to insert
+// its output: the renderer HTML-escapes text, single-quotes / strips
+// fontFamily, and validates color against the rgb shape, so the string
+// arriving in `html` carries no live HTML constructs. The two APIs are NOT
+// equivalent in general — innerHTML parses with the script "already
+// started" flag so <script> tags arrive inert, while
+// createContextualFragment produces script elements that DO execute on
+// insertion. That difference is moot for renderToHTML's output today (no
+// raw "<" can survive the escape) but it explains why we treat this seam
+// as the single auditable boundary between trusted-HTML producer and the
+// DOM: future changes can be vetted at exactly one place, and reverting
+// to innerHTML elsewhere would re-introduce raw-HTML insertion sites
+// without the safety analysis we did here.
 function paintPage(html) {
   const range = document.createRange();
   range.selectNodeContents(els.page);
