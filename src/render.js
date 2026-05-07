@@ -26,11 +26,19 @@ function runStyle(style) {
   if (typeof style.fontSize === "number") {
     parts.push(`font-size: ${style.fontSize}pt`);
   }
-  if (style.color) parts.push(`color: ${style.color}`);
+  if (style.color && isRgbColor(style.color)) {
+    parts.push(`color: ${style.color}`);
+  }
   if (style.fontFamily) {
     parts.push(`font-family: '${sanitizeFontFamily(style.fontFamily)}'`);
   }
   return parts.join("; ");
+}
+
+function isRgbColor(value) {
+  // Match the canonical shape colorIntToRgb produces: rgb(r, g, b) with a
+  // single space after each comma. Anything looser is suspect — drop it.
+  return /^rgb\(\d{1,3}, \d{1,3}, \d{1,3}\)$/.test(value);
 }
 
 function sanitizeFontFamily(value) {
