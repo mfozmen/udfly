@@ -43,6 +43,16 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML applies fontSize as inline font-size in pt units", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  assert.ok(
+    /<span[^>]*font-size:\s*1[12]pt[^>]*>/.test(html),
+    "expected at least one span with font-size 11pt or 12pt"
+  );
+});
+
 test("renderToHTML applies underline as text-decoration on run spans", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
