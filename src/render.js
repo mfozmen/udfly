@@ -10,7 +10,19 @@ export function renderToHTML(parsed) {
 
 function renderParagraph(p) {
   const inner = p.runs.map(renderRun).join("");
-  return `<p>${inner}</p>`;
+  const css = paragraphStyle(p.style);
+  const attr = css ? ` style="${css}"` : "";
+  return `<p${attr}>${inner}</p>`;
+}
+
+function paragraphStyle(style) {
+  const parts = [];
+  if (typeof style.alignment === "number") {
+    const map = { 0: "left", 1: "center", 2: "right", 3: "justify" };
+    const value = map[style.alignment];
+    if (value) parts.push(`text-align: ${value}`);
+  }
+  return parts.join("; ");
 }
 
 function renderRun(run) {
