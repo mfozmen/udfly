@@ -22,6 +22,9 @@ function paragraphStyle(style) {
     const value = map[style.alignment];
     if (value) parts.push(`text-align: ${value}`);
   }
+  if (typeof style.leftIndent === "number") {
+    parts.push(`margin-left: ${style.leftIndent}pt`);
+  }
   return parts.join("; ");
 }
 
