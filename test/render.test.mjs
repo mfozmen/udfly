@@ -43,6 +43,51 @@ test("renderToHTML HTML-escapes <, >, &, and \" in run text", () => {
   assert.ok(html.includes("&quot;x&quot;"), 'expected escaped "');
 });
 
+test("renderToHTML strips CSS-injection vectors from fontFamily values", () => {
+  // Hostile UDFs could ship family="..." with CSS-special chars that break
+  // out of the single-quoted CSS string (newline ends declaration; backslash
+  // starts CSS escape; embedded ' or " would break out of CSS or HTML).
+  const attacks = [
+    "Times\nColor: red",
+    "Arial\\27 ",
+    'Times"breakout',
+    "Arial'+url(evil)+'",
+  ];
+  for (const attack of attacks) {
+    const parsed = {
+      text: "",
+      pages: 1,
+      properties: {},
+      elements: [
+        {
+          type: "paragraph",
+          style: {},
+          runs: [
+            { text: "x", kind: "content", style: { fontFamily: attack } },
+          ],
+        },
+      ],
+    };
+    const html = renderToHTML(parsed);
+    // Parse output via jsdom and inspect the style attribute the browser
+    // actually sees. The font-family value must not contain any CSS/HTML
+    // special character.
+    const dom = new JSDOM(`<!DOCTYPE html><body>${html}</body>`);
+    const span = dom.window.document.querySelector("span");
+    assert.ok(span, `output should parse to a span for input ${JSON.stringify(attack)}`);
+    const styleAttr = span.getAttribute("style") || "";
+    const familyMatch = styleAttr.match(/font-family:\s*'([^']*)'/);
+    assert.ok(
+      familyMatch,
+      `font-family should be present and single-quoted for input ${JSON.stringify(attack)}`
+    );
+    assert.ok(
+      !/[\r\n\t\\'"<>]/.test(familyMatch[1]),
+      `family value should be sanitized for input ${JSON.stringify(attack)}; got ${JSON.stringify(familyMatch[1])}`
+    );
+  }
+});
+
 test("renderToHTML wraps fontFamily in single quotes so it doesn't break the HTML style attribute", async () => {
   const buffer = await loadFixture("fixture-mediation-application.udf");
   const parsed = await parseUDF(buffer);
