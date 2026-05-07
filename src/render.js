@@ -14,5 +14,13 @@ function renderParagraph(p) {
 }
 
 function renderRun(run) {
-  return `<span>${run.text}</span>`;
+  return `<span>${escapeHtml(run.text)}</span>`;
+}
+
+function escapeHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
