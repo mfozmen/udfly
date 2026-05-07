@@ -9,6 +9,10 @@ export function renderToHTML(parsed) {
 }
 
 function renderParagraph(p) {
-  const inner = p.runs.map((r) => r.text).join("");
+  const inner = p.runs.map(renderRun).join("");
   return `<p>${inner}</p>`;
+}
+
+function renderRun(run) {
+  return `<span>${run.text}</span>`;
 }
