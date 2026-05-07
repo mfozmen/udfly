@@ -14,7 +14,15 @@ function renderParagraph(p) {
 }
 
 function renderRun(run) {
-  return `<span>${escapeHtml(run.text)}</span>`;
+  const css = runStyle(run.style);
+  const attr = css ? ` style="${css}"` : "";
+  return `<span${attr}>${escapeHtml(run.text)}</span>`;
+}
+
+function runStyle(style) {
+  const parts = [];
+  if (style.bold) parts.push("font-weight: bold");
+  return parts.join("; ");
 }
 
 function escapeHtml(s) {
