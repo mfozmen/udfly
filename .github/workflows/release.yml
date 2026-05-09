@@ -1,10 +1,13 @@
 name: Release
 
-# Triggered when a semver tag is pushed (e.g. v1.0.0). The workflow uses the
-# canonical Tauri two-job pattern so the draft Release is created exactly
-# once before any matrix leg starts, avoiding a partial-upload mix when
-# (1) a tag is re-pushed mid-build or (2) one platform's upload races
-# another via cancel-in-progress.
+# Triggered when a semver tag is pushed (e.g. v1.0.0). The workflow uses
+# the canonical Tauri two-job pattern: a single create-release job runs
+# first and emits the draft Release id; the build-tauri matrix then
+# depends on it via `needs:` so every platform leg uploads to the same
+# releaseId. That alone eliminates the within-run upload race a single-job
+# matrix would have. Cross-run races (a tag being re-pushed before the
+# first run finishes) are handled separately by the concurrency block
+# below.
 on:
   push:
     tags:
