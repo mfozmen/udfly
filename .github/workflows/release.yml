@@ -37,10 +37,12 @@ jobs:
           # loudly so we don't silently clobber a public release.
           script: |
             const tag = context.ref.replace('refs/tags/', '');
-            // Only catch genuine API errors (specifically 404 = no release for
-            // this tag). The published-vs-draft policy is enforced AFTER the
-            // try/catch so the refusal can't accidentally be swallowed by a
-            // future change to how API errors are shaped or wrapped.
+            // The catch is scoped to genuine API errors (specifically 404 =
+            // no release for this tag). The classification (draft vs.
+            // published) happens inside the try, but the *enforcement throw*
+            // for the published case is hoisted past the catch, so the
+            // refusal can't accidentally be swallowed by a future change to
+            // how API errors are shaped or wrapped.
             let staleDraftId = null;
             let alreadyPublished = false;
             try {
