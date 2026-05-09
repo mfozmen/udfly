@@ -31,7 +31,7 @@ Pre-built binaries for Windows, macOS, and Linux are attached to each [GitHub Re
 These releases are **not code-signed**. The first time you launch UDF Viewer, your OS will warn you:
 
 - **Windows SmartScreen**: "Windows protected your PC." Click "More info" → "Run anyway."
-- **macOS Gatekeeper**: "UDF Viewer can't be opened because Apple cannot check it for malicious software." Right-click (or Control-click) the app in Finder, choose "Open," then confirm. macOS remembers the override for next time.
+- **macOS Gatekeeper**: "UDF Viewer can't be opened because Apple cannot check it for malicious software." On macOS 15 Sequoia and later, the right-click → Open shortcut no longer appears for unsigned downloads — open System Settings → **Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the UDF Viewer entry. On macOS 14 Sonoma and earlier, you can also right-click (or Control-click) the app in Finder, choose "Open," then confirm. macOS remembers the override for next time.
 - **Linux**: no signing prompt; the AppImage may need `chmod +x udf-viewer_*.AppImage` before running.
 
 If you want to verify the binary instead of trusting the warning, build from source — the steps are below.
