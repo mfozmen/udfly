@@ -100,7 +100,10 @@ jobs:
           - platform: ubuntu-22.04
             args: ""
           - platform: windows-latest
-            args: ""
+            # Restrict Windows to the NSIS installer; bundle.targets: "all"
+            # would otherwise also produce a WiX MSI that the README install
+            # table doesn't claim and most end users don't need.
+            args: --bundles nsis
 
     runs-on: ${{ matrix.platform }}
 
