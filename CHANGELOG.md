@@ -19,3 +19,6 @@ Initial public release. UDF Viewer is a cross-platform Tauri 2 desktop app for o
 - **Drag-drop file handling**: drop a `.udf` on the window to parse and render it; non-`.udf` drops route to a clear error state. `Ctrl/Cmd+P` triggers print when a document is loaded.
 - **File association** for `.udf` registered via `tauri.conf.json` (so OS-level "Open with" lists UDF Viewer once installed).
 - **Cross-platform release CI**: `.github/workflows/release.yml` builds NSIS / DMG / AppImage / DEB / portable artifacts on tag push and uploads them to a draft GitHub Release.
+
+[unreleased]: https://github.com/mfozmen/udf-viewer/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/mfozmen/udf-viewer/releases/tag/v1.0.0
