@@ -1,9 +1,10 @@
 name: Release
 
-# Triggered when a semver tag is pushed (e.g. v0.1.0). Builds the Tauri app
-# on each platform in parallel and uploads the artifacts to a draft GitHub
-# Release named after the tag. Drafting (rather than auto-publishing) lets a
-# human review the artifacts and notes before the release is visible.
+# Triggered when a semver tag is pushed (e.g. v1.0.0). The workflow uses the
+# canonical Tauri two-job pattern so the draft Release is created exactly
+# once before any matrix leg starts, avoiding a partial-upload mix when
+# (1) a tag is re-pushed mid-build or (2) one platform's upload races
+# another via cancel-in-progress.
 on:
   push:
     tags:
@@ -13,15 +14,68 @@ permissions:
   contents: write
 
 # A re-pushed tag (e.g., to fix a typo in a release commit before the draft
-# is published) would otherwise spawn a second workflow run that races the
-# first one to create the same draft Release. Cancel the in-flight run when
-# a new push for the same tag arrives.
+# is published) cancels the in-flight run for the same ref, so two runs
+# never race the same draft Release.
 concurrency:
   group: release-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create or replace the draft Release
+        id: create
+        uses: actions/github-script@v7
+        with:
+          # If a draft for this tag already exists from a previous (cancelled
+          # or stale) run, delete it before recreating — that keeps repeated
+          # tag pushes from accumulating leftover drafts. A non-draft (i.e.,
+          # already-published) release is left alone and the workflow fails
+          # loudly so we don't silently clobber a public release.
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            try {
+              const { data: existing } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag,
+              });
+              if (!existing.draft) {
+                throw new Error(
+                  `Release for ${tag} is already published; refusing to overwrite.`
+                );
+              }
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existing.id,
+              });
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+            const { data: created } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `UDF Viewer ${tag}`,
+              body: [
+                `See [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/${tag}/CHANGELOG.md) for the release notes.`,
+                '',
+                '**First-run security warnings**: these binaries are unsigned. Windows SmartScreen and macOS Gatekeeper will block them on the first launch — see the README for the per-platform unblock steps.',
+              ].join('\n'),
+              draft: true,
+              prerelease: false,
+            });
+            return created.id;
+
+  build-tauri:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -73,17 +127,10 @@ jobs:
       - name: Run test suite
         run: npm test
 
-      - name: Build and upload to draft Release
+      - name: Build and upload to the draft Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "UDF Viewer ${{ github.ref_name }}"
-          releaseBody: |
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for the release notes.
-
-            **First-run security warnings**: these binaries are unsigned. Windows SmartScreen and macOS Gatekeeper will block them on the first launch — see the README for the per-platform unblock steps.
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
