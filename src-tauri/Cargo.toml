@@ -1,6 +1,6 @@
 [package]
 name = "udf-viewer"
-version = "0.1.0"
+version = "1.0.0"
 description = "Cross-platform desktop viewer for Turkey's UYAP .udf documents"
 authors = ["Mehmet Fahri Özmen <mehmetfahriozmen@gmail.com>"]
 edition = "2021"
