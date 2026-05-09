@@ -51,7 +51,7 @@ The status bar shows the document's page count, file size, and the UYAP verifica
 - [Node.js 20+](https://nodejs.org/) (with `npm`)
 - [Rust stable](https://www.rust-lang.org/tools/install) (latest)
 - Platform Tauri prerequisites — see <https://tauri.app/start/prerequisites/>:
-  - Linux: `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev`
+  - Linux: `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf` (`patchelf` is required for AppImage bundling, which `bundle.targets: "all"` always attempts)
   - macOS: Xcode Command Line Tools
   - Windows: Microsoft C++ Build Tools, WebView2 (preinstalled on Windows 11)
 
