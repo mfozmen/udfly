@@ -37,24 +37,37 @@ jobs:
           # loudly so we don't silently clobber a public release.
           script: |
             const tag = context.ref.replace('refs/tags/', '');
+            // Only catch genuine API errors (specifically 404 = no release for
+            // this tag). The published-vs-draft policy is enforced AFTER the
+            // try/catch so the refusal can't accidentally be swallowed by a
+            // future change to how API errors are shaped or wrapped.
+            let staleDraftId = null;
+            let alreadyPublished = false;
             try {
               const { data: existing } = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 tag,
               });
-              if (!existing.draft) {
-                throw new Error(
-                  `Release for ${tag} is already published; refusing to overwrite.`
-                );
+              if (existing.draft) {
+                staleDraftId = existing.id;
+              } else {
+                alreadyPublished = true;
               }
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+            if (alreadyPublished) {
+              throw new Error(
+                `Release for ${tag} is already published; refusing to overwrite.`
+              );
+            }
+            if (staleDraftId !== null) {
               await github.rest.repos.deleteRelease({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                release_id: existing.id,
+                release_id: staleDraftId,
               });
-            } catch (e) {
-              if (e.status !== 404) throw e;
             }
             const { data: created } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
