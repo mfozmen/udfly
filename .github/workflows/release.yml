@@ -142,5 +142,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # tagName is required even with releaseId, because tauri-action's
+          # uploadVersionJSON step uses it to construct the asset URLs in
+          # the latest.json updater manifest. Without it, those URLs become
+          # `…/releases/download//artifact.tar.gz` and silently break any
+          # future tauri-plugin-updater integration.
+          tagName: ${{ github.ref_name }}
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
