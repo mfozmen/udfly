@@ -22,7 +22,7 @@ Pre-built binaries for Windows, macOS, and Linux are attached to each [GitHub Re
 
 | Platform | Artifact |
 |----------|----------|
-| Windows  | `UDF-Viewer_x.y.z_x64-setup.exe` (NSIS installer) or the portable `udf-viewer.exe` |
+| Windows  | `UDF-Viewer_x.y.z_x64-setup.exe` (NSIS installer) |
 | macOS    | `UDF-Viewer_x.y.z_universal.dmg` (Apple Silicon + Intel) |
 | Linux    | `UDF-Viewer_x.y.z_amd64.deb` (Debian / Ubuntu) or `udf-viewer_x.y.z_amd64.AppImage` |
 
