@@ -12,6 +12,14 @@ on:
 permissions:
   contents: write
 
+# A re-pushed tag (e.g., to fix a typo in a release commit before the draft
+# is published) would otherwise spawn a second workflow run that races the
+# first one to create the same draft Release. Cancel the in-flight run when
+# a new push for the same tag arrives.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
