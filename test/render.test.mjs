@@ -108,6 +108,25 @@ test("renderToHTML sets white-space: pre-wrap on every paragraph", async () => {
   );
 });
 
+test("renderToHTML renders the application fixture's contact block without line-height collapse", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const html = renderToHTML(parsed);
+  // Regression for #7. Every contact-block paragraph in this fixture has
+  // lineSpacing 0.5; the broken state shipped a literal CSS line-height of
+  // 0.5 (or 0.<n> for other lineSpacing values), collapsing adjacent
+  // lines on top of each other. The regex requires the decimal point
+  // explicitly so it can't accidentally match a future, valid
+  // line-height: 0 emitted as a sentinel — only the broken sub-1
+  // fractional values are flagged.
+  const subOneFractional = html.match(/line-height:\s*0\.\d+/g) || [];
+  assert.equal(
+    subOneFractional.length,
+    0,
+    `no paragraph should carry a fractional sub-1 line-height; found ${subOneFractional.length}: ${subOneFractional.slice(0, 3).join(", ")}`
+  );
+});
+
 test("renderToHTML interprets lineSpacing as extra line-height on top of single spacing", () => {
   // UDF's LineSpacing is additive — UYAP's body-text paragraphs ship with
   // values like 0.5 meaning "half a line of extra space" (1.5x total),
