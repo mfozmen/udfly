@@ -103,30 +103,44 @@ async function openFile(file) {
   await loadBytes(file.name, file.size, buffer);
 }
 
+// Guard against double-firing: the Open button click and the Ctrl+O
+// keydown can both reach pickAndOpen, and rapid keypress mashing or
+// programmatic invocation would otherwise race two loadBytes calls into
+// the same DOM. The flag is module-scoped because pickAndOpen has only
+// one logical caller-set (the toolbar + keyboard shortcut), not multiple
+// independent UI paths.
+let pickInFlight = false;
+
 async function pickAndOpen() {
-  let path;
+  if (pickInFlight) return;
+  pickInFlight = true;
   try {
-    path = await openDialog({
-      multiple: false,
-      filters: [{ name: "UDF Document", extensions: ["udf"] }],
-    });
-  } catch (cause) {
-    showError(cause.message || String(cause));
-    return;
+    let path;
+    try {
+      path = await openDialog({
+        multiple: false,
+        filters: [{ name: "UDF Document", extensions: ["udf"] }],
+      });
+    } catch (cause) {
+      showError(cause.message || String(cause));
+      return;
+    }
+    if (!path) return; // user canceled the OS picker
+    const filename = basename(path);
+    let bytes;
+    try {
+      // Tauri serializes Vec<u8> as a JSON number array, so the result is
+      // already iterable into Uint8Array on the JS side.
+      bytes = await invoke("read_file_bytes", { path });
+    } catch (cause) {
+      showError(`Failed to read ${filename}: ${cause}`);
+      return;
+    }
+    const buffer = new Uint8Array(bytes).buffer;
+    await loadBytes(filename, buffer.byteLength, buffer);
+  } finally {
+    pickInFlight = false;
   }
-  if (!path) return; // user canceled the OS picker
-  const filename = basename(path);
-  let bytes;
-  try {
-    // Tauri serializes Vec<u8> as a JSON number array, so the result is
-    // already iterable into Uint8Array on the JS side.
-    bytes = await invoke("read_file_bytes", { path });
-  } catch (cause) {
-    showError(`Failed to read ${filename}: ${cause}`);
-    return;
-  }
-  const buffer = new Uint8Array(bytes).buffer;
-  await loadBytes(filename, buffer.byteLength, buffer);
 }
 
 function isUdfFile(file) {
