@@ -15,6 +15,14 @@
       <div class="topbar__actions">
         <button
           class="btn"
+          id="open-btn"
+          type="button"
+          aria-keyshortcuts="Control+O"
+        >
+          Open
+        </button>
+        <button
+          class="btn"
           id="print-btn"
           type="button"
           disabled
@@ -29,7 +37,7 @@
       <section class="state state--empty" id="empty-state" aria-label="No document">
         <div class="state__card state__card--dropzone">
           <p class="state__title">Drop a .udf file here</p>
-          <p class="state__hint">or use the file association from your OS</p>
+          <p class="state__hint">or click <strong>Open</strong> in the toolbar (Ctrl/Cmd+O)</p>
         </div>
       </section>
 
