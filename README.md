@@ -22,9 +22,11 @@ Pre-built binaries for Windows, macOS, and Linux are attached to each [GitHub Re
 
 | Platform | Artifact |
 |----------|----------|
-| Windows  | `UDF-Viewer_x.y.z_x64-setup.exe` (NSIS installer) |
+| Windows  | `UDF-Viewer_x.y.z_x64-setup.exe` (NSIS installer) or `UDF-Viewer_x.y.z_x64-portable.exe` (single self-contained executable) |
 | macOS    | `UDF-Viewer_x.y.z_universal.dmg` (Apple Silicon + Intel) |
 | Linux    | `UDF-Viewer_x.y.z_amd64.deb` (Debian / Ubuntu) or `udf-viewer_x.y.z_amd64.AppImage` |
+
+The portable Windows variant is the raw Tauri binary — no installer, no registry entries, no admin rights. It depends on Microsoft Edge WebView2, which ships preinstalled on Windows 11 and on every recent Windows 10 update; if WebView2 is missing on an older system, install the [Evergreen Standalone Installer](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) once and the portable `.exe` runs.
 
 ### First-run security warnings
 
