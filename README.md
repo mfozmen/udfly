@@ -105,7 +105,6 @@ Pull requests are welcome — especially:
 
 - **Sanitized test fixtures** that exercise edge cases the current samples don't cover (italic / strikeOut runs, multi-row tables with column spans, headers with multiple paragraphs, etc.). Replace any personal data with dummy values **of identical character length** so all `startOffset` / `length` pointers in the `<elements>` section stay valid.
 - **Bug reports** with a sanitized fixture that reproduces the issue, attached to a GitHub issue.
-- **Translation help** for any future Turkish-language UI surface (the codebase itself stays English for OSS contribution).
 
 Please read [`CLAUDE.md`](CLAUDE.md) before opening a PR — the project has strict rules around TDD, branch-per-change, and conventional commits.
 
