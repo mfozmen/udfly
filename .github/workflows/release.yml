@@ -158,3 +158,35 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+
+      # Tauri 2's NSIS bundler doesn't expose a portable mode, but the
+      # raw target/release/udf-viewer.exe Cargo produces is already a
+      # self-contained Tauri binary (depends only on WebView2, which
+      # ships with Windows 11 and modern Windows 10). Append it to the
+      # draft Release the tauri-action step targeted so the install
+      # table's portable row points at a real artifact.
+      #
+      # Upload via the GitHub Releases assets endpoint with the
+      # release_id from the create-release job, NOT via `gh release
+      # upload <tag>` — gh resolves the release by tag through an API
+      # that returns published releases only and 404s on drafts (we
+      # keep the release as a draft so a human reviews the artifacts
+      # before publishing).
+      - name: Upload portable Windows binary
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARTIFACT="UDF-Viewer_${VERSION}_x64-portable.exe"
+          cp src-tauri/target/release/udf-viewer.exe "$ARTIFACT"
+          curl --fail --silent --show-error --location \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --header "Content-Type: application/octet-stream" \
+            --data-binary "@$ARTIFACT" \
+            "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=$ARTIFACT"
