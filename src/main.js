@@ -97,7 +97,6 @@ async function openFile(file) {
   try {
     buffer = await file.arrayBuffer();
   } catch (cause) {
-    setFilename(file.name);
     showError(`Failed to read ${file.name}: ${cause.message}`);
     return;
   }
@@ -123,7 +122,6 @@ async function pickAndOpen() {
     // already iterable into Uint8Array on the JS side.
     bytes = await invoke("read_file_bytes", { path });
   } catch (cause) {
-    setFilename(filename);
     showError(`Failed to read ${filename}: ${cause}`);
     return;
   }
