@@ -81,7 +81,12 @@ function paragraphStyle(style) {
     parts.push(`margin-bottom: ${style.spaceBelow}pt`);
   }
   if (typeof style.lineSpacing === "number" && style.lineSpacing > 0) {
-    parts.push(`line-height: ${style.lineSpacing}`);
+    // UDF's LineSpacing is additive: it's the *extra* space on top of
+    // single line spacing, matching the Java text framework UYAP is built
+    // on. UYAP body paragraphs commonly ship with 0.5 meaning "single plus
+    // half" (line-height 1.5); treating the raw value as a CSS line-height
+    // multiplier (0.5 literal) would collapse adjacent lines visually.
+    parts.push(`line-height: ${1 + style.lineSpacing}`);
   }
   return parts.join("; ");
 }
