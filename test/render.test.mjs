@@ -155,8 +155,9 @@ test("renderToHTML interprets lineSpacing as extra line-height on top of single 
     "lineSpacing 0.5 should render as line-height 1.5"
   );
   // 1.0 → 2.0 (double spacing). Catches a hypothetical wrong formula
-  // (e.g., `0.5 + lineSpacing`) that would coincidentally produce 1.5
-  // for the first data point but 1.5 instead of 2.0 here.
+  // like `lineSpacing * 3` (0.5 → 1.5, but 1.0 → 3.0) or
+  // `0.5 + lineSpacing * 2` (0.5 → 1.5, but 1.0 → 2.5) that would
+  // coincidentally pass the first assertion while breaking the formula.
   assert.ok(
     /<p[^>]*line-height:\s*2(?!\.\d|\d)[^>]*>/.test(renderWithLineSpacing(1.0)),
     "lineSpacing 1.0 should render as line-height 2 (double spacing)"
