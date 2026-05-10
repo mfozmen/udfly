@@ -3,6 +3,7 @@ import { renderToHTML } from "./render.js";
 import { formatBytes } from "./format.js";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { basename } from "./path.js";
 
 const els = {
   filename: document.getElementById("filename"),
@@ -20,9 +21,6 @@ const els = {
   verificationInfo: document.getElementById("verification-info"),
 };
 
-function basename(p) {
-  return p.replace(/^.*[\\/]/, "");
-}
 
 function showState(name) {
   els.emptyState.hidden = name !== "empty";
