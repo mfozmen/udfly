@@ -108,21 +108,40 @@ test("renderToHTML sets white-space: pre-wrap on every paragraph", async () => {
   );
 });
 
-test("renderToHTML applies lineSpacing as inline line-height multiplier", () => {
-  const parsed = {
-    text: "",
-    pages: 1,
-    properties: {},
-    elements: [
-      {
-        type: "paragraph",
-        style: { lineSpacing: 1.5 },
-        runs: [{ text: "x", kind: "content", style: {} }],
-      },
-    ],
-  };
-  const html = renderToHTML(parsed);
-  assert.ok(/<p[^>]*line-height:\s*1\.5[^>]*>/.test(html), "expected line-height: 1.5");
+test("renderToHTML interprets lineSpacing as extra line-height on top of single spacing", () => {
+  // UDF's LineSpacing is additive — UYAP's body-text paragraphs ship with
+  // values like 0.5 meaning "half a line of extra space" (1.5x total),
+  // matching the Java text framework UYAP is built on. Treating it as a
+  // raw CSS line-height multiplier (0.5 → line-height: 0.5) would collapse
+  // the lines on top of each other; the renderer must emit
+  // line-height: (1 + lineSpacing). Two data points pin the formula —
+  // a single data point would let `lineSpacing * 2` pass coincidentally.
+  function renderWithLineSpacing(value) {
+    return renderToHTML({
+      text: "",
+      pages: 1,
+      properties: {},
+      elements: [
+        {
+          type: "paragraph",
+          style: { lineSpacing: value },
+          runs: [{ text: "x", kind: "content", style: {} }],
+        },
+      ],
+    });
+  }
+  // 0.5 → 1.5 ("single plus half"), the common UYAP body-text value.
+  assert.ok(
+    /<p[^>]*line-height:\s*1\.5[^>]*>/.test(renderWithLineSpacing(0.5)),
+    "lineSpacing 0.5 should render as line-height 1.5"
+  );
+  // 1.0 → 2.0 (double spacing). Catches a hypothetical wrong formula
+  // (e.g., `0.5 + lineSpacing`) that would coincidentally produce 1.5
+  // for the first data point but 1.5 instead of 2.0 here.
+  assert.ok(
+    /<p[^>]*line-height:\s*2(?!\.\d|\d)[^>]*>/.test(renderWithLineSpacing(1.0)),
+    "lineSpacing 1.0 should render as line-height 2 (double spacing)"
+  );
 });
 
 test("renderToHTML applies spaceBelow as inline margin-bottom in pt", () => {
