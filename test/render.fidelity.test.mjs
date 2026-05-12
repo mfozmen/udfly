@@ -72,3 +72,52 @@ test("renderToHTML keeps painting borders on tables without a borderNone flag", 
   assert.match(html, /<table[^>]*class="udf-table"[^>]*>/);
   assert.ok(!/data-border="none"/.test(html), "no data-border on a default table");
 });
+
+// --- page-scoped headers/footers ------------------------------------------
+
+test("parseUDF defaults a header's startPage to 1 when the attribute is absent", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
+  const header = parsed.elements.find((e) => e.type === "header");
+  assert.ok(header, "the fixture has a header element");
+  assert.equal(header.startPage, 1);
+});
+
+test("renderToHTML skips a header whose startPage is past the document's page count", () => {
+  // A UYAP page header with startPage="2" is page-2-onward furniture; on a
+  // one-page document the official viewer never shows it, so we mustn't
+  // paint it inline at the top of the body.
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "header",
+        startPage: 2,
+        paragraphs: [{ type: "paragraph", style: {}, runs: [{ text: "court name", kind: "content", style: {} }] }],
+      },
+      { type: "paragraph", style: {}, runs: [{ text: "body", kind: "content", style: {} }] },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(!/udf-header/.test(html), "header with startPage 2 should not render on a 1-page doc");
+  assert.ok(html.includes("body"), "the body paragraph still renders");
+});
+
+test("renderToHTML renders a header whose startPage is within the page count", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "header",
+        startPage: 1,
+        paragraphs: [{ type: "paragraph", style: {}, runs: [{ text: "court name", kind: "content", style: {} }] }],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.match(html, /<div[^>]*class="udf-header"[^>]*>/);
+});
