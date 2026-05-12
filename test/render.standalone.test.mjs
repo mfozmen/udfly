@@ -76,6 +76,32 @@ test("renderToStandaloneHTML inlines renderer-class CSS so the file is self-cont
   assert.match(doc, /<style>[\s\S]*\.udf-table[\s\S]*<\/style>/, "expected .udf-table rule in <style>");
 });
 
+test("renderToStandaloneHTML preserves HTML-escaping of run text end to end", () => {
+  // The standalone wrapper embeds renderToHTML output verbatim, so HTML-
+  // special characters in run text must arrive escaped — a future refactor
+  // that re-processed the body (or built the wrapper from a non-escaped
+  // source) would otherwise let "<script>" through into the exported file.
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: {},
+        runs: [
+          { text: '<script>alert("x")</script> & <b>bold</b>', kind: "content", style: {} },
+        ],
+      },
+    ],
+  };
+  const doc = renderToStandaloneHTML(parsed);
+  assert.ok(!/<script>/i.test(doc), "raw <script> must not appear in the document body");
+  assert.ok(!/<b>bold<\/b>/i.test(doc), "raw <b> markup must not appear");
+  assert.match(doc, /&lt;script&gt;/, "script text should be present escaped");
+  assert.match(doc, /&amp; /, "ampersand should be present escaped");
+});
+
 test("renderToStandaloneHTML contains no external resource references", () => {
   const parsed = {
     text: "",
