@@ -125,7 +125,9 @@ function parseParagraph(node, cdata, styleMap) {
   const runs = [];
   for (const child of node.children) {
     const tag = child.tagName;
-    if (tag === "content" || tag === "space" || tag === "field") {
+    // <tab> carries the tab character at its offset; dropping it (as an
+    // earlier version did) silently glued the surrounding columns together.
+    if (tag === "content" || tag === "space" || tag === "field" || tag === "tab") {
       runs.push(parseRun(child, tag, cdata, styleMap, resolved));
     }
   }
