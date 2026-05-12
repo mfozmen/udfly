@@ -102,6 +102,12 @@ function showError(message) {
 
 async function loadBytes(filename, sizeBytes, buffer) {
   setFilename(filename);
+  // Drop the previous document before the async parse: otherwise a click on
+  // Export/Print between this call and the parse completing would act on the
+  // document being replaced — and worse, if the new parse finishes while a
+  // save dialog for the old one is still open, the save would write the old
+  // content under a name matching the new document on screen.
+  clearDocument();
   let parsed;
   try {
     parsed = await parseUDF(buffer);
