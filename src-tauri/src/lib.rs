@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::sync::Mutex;
 // Manager (for app_handle.state()) and Emitter (for app_handle.emit()) are
 // both only used inside the macOS-only RunEvent::Opened arm. Gating the
@@ -6,12 +7,16 @@ use std::sync::Mutex;
 #[cfg(target_os = "macos")]
 use tauri::{Emitter, Manager};
 
-// Buffer of paths the OS has handed the app for us to open. Filled from
-// CLI argv on launch (Windows / Linux file-association double-click) and
-// from RunEvent::Opened at runtime (macOS Apple-Event handoff). The
+// FIFO queue of paths the OS has handed the app for us to open. Filled
+// from CLI argv on launch (Windows / Linux file-association double-click)
+// and from RunEvent::Opened at runtime (macOS Apple-Event handoff). The
 // frontend drains it via take_pending_path on startup and again whenever
 // the udf-viewer://path-available event fires.
-struct PendingPaths(Mutex<Vec<String>>);
+//
+// VecDeque (with pop_front) preserves selection order across a multi-file
+// "Open With → UDF Viewer" — Finder hands the URLs in the order the user
+// selected them, and a Vec/pop tail would reverse that.
+struct PendingPaths(Mutex<VecDeque<String>>);
 
 // Read a file the user picked via the dialog plugin and return its bytes
 // to the frontend. The path is supplied by JS — which only has access to
@@ -32,7 +37,7 @@ fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
 // arrive after the frontend mounted are picked up too).
 #[tauri::command]
 fn take_pending_path(state: tauri::State<PendingPaths>) -> Option<String> {
-    state.0.lock().unwrap().pop()
+    state.0.lock().unwrap().pop_front()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -40,11 +45,11 @@ pub fn run() {
     // The OS hands a file-association double-click as argv[1] on Windows
     // and Linux. (macOS goes through RunEvent::Opened instead — handled
     // in the run-loop callback below.)
-    let argv_path: Vec<String> = std::env::args().skip(1).take(1).collect();
+    let argv_paths: VecDeque<String> = std::env::args().skip(1).take(1).collect();
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(PendingPaths(Mutex::new(argv_path)))
+        .manage(PendingPaths(Mutex::new(argv_paths)))
         .invoke_handler(tauri::generate_handler![read_file_bytes, take_pending_path])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
@@ -60,7 +65,7 @@ pub fn run() {
             let mut queue = state.0.lock().unwrap();
             for url in urls {
                 if let Ok(path) = url.to_file_path() {
-                    queue.push(path.to_string_lossy().into_owned());
+                    queue.push_back(path.to_string_lossy().into_owned());
                 }
             }
             drop(queue);
