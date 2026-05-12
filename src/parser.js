@@ -102,7 +102,13 @@ function parseTable(node, cdata, styleMap) {
     }
     rows.push(cells);
   }
-  return { type: "table", rows };
+  const table = { type: "table", rows };
+  // UYAP marks layout tables (signature blocks, two-column forms)
+  // "borderNone"; the renderer keys off this to suppress cell borders. Keep
+  // the raw value so a future "borderAll"/etc. stays distinguishable.
+  const border = node.getAttribute("border");
+  if (border) table.border = border;
+  return table;
 }
 
 function parseParagraph(node, cdata, styleMap) {

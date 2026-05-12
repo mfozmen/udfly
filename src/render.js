@@ -19,7 +19,8 @@ const EXPORT_CSS = `body { margin: 0; background: #fff; }
 .page .udf-header, .page .udf-footer { font-size: 10pt; color: #6e6e73; margin-bottom: 16px; }
 .page .udf-footer { margin-top: 32px; margin-bottom: 0; }
 .page .udf-table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
-.page .udf-table td { border: 1px solid #e0e0e0; padding: 4pt 8pt; vertical-align: top; }`;
+.page .udf-table td { border: 1px solid #e0e0e0; padding: 4pt 8pt; vertical-align: top; }
+.page .udf-table[data-border="none"] td { border: none; padding: 0; }`;
 
 // Wrap renderToHTML output in a self-contained HTML5 document for export.
 // No external resources, no scripts — opening the file offline or forwarding
@@ -71,7 +72,10 @@ function renderTable(table) {
       return `<tr>${cellsHtml}</tr>`;
     })
     .join("");
-  return `<table class="udf-table">${rows}</table>`;
+  // borderNone tables are column scaffolding (signature blocks, forms), not
+  // data grids; the data attribute lets the stylesheet drop the cell borders.
+  const borderAttr = table.border === "borderNone" ? ' data-border="none"' : "";
+  return `<table class="udf-table"${borderAttr}>${rows}</table>`;
 }
 
 function renderParagraph(p) {
