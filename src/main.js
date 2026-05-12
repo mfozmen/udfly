@@ -2,6 +2,7 @@ import { parseUDF } from "./parser.js";
 import { renderToHTML } from "./render.js";
 import { formatBytes } from "./format.js";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { basename } from "./path.js";
 
@@ -216,3 +217,29 @@ window.addEventListener("keydown", (e) => {
 });
 
 showState("empty");
+
+// Drain any OS-handoff path the backend has queued. On Windows / Linux a
+// double-click of a registered .udf gets the path queued from argv before
+// the frontend mounts, so the initial drain on startup picks it up. On
+// macOS the path arrives via RunEvent::Opened, which can happen before or
+// after the frontend mounts — drain once now, then listen for the
+// udf-viewer://path-available event for any later arrivals.
+async function drainPendingPath() {
+  let path;
+  try {
+    path = await invoke("take_pending_path");
+  } catch {
+    return; // backend not available (e.g. running in plain browser) — silently skip
+  }
+  if (path) await loadFromPath(path);
+}
+
+drainPendingPath();
+
+listen("udf-viewer://path-available", () => {
+  drainPendingPath();
+}).catch(() => {
+  // No-op: listen() rejects when there's no Tauri event bridge available,
+  // which is the case when this module is loaded outside the WebView (the
+  // standalone Vite dev server during tests). Drag-drop still works.
+});
