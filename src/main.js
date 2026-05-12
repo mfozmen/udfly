@@ -103,6 +103,26 @@ async function openFile(file) {
   await loadBytes(file.name, file.size, buffer);
 }
 
+// Path-driven load: invoke the Tauri read_file_bytes command on a host
+// filesystem path and pipe the result through loadBytes. Both the dialog
+// flow (pickAndOpen) and the launch-time OS-handoff flow share this — the
+// dialog provides the path interactively, the OS-handoff provides it as
+// argv or as a macOS RunEvent::Opened URL.
+async function loadFromPath(path) {
+  const filename = basename(path);
+  let bytes;
+  try {
+    // Tauri serializes Vec<u8> as a JSON number array, so the result is
+    // already iterable into Uint8Array on the JS side.
+    bytes = await invoke("read_file_bytes", { path });
+  } catch (cause) {
+    showError(`Failed to read ${filename}: ${cause}`);
+    return;
+  }
+  const buffer = new Uint8Array(bytes).buffer;
+  await loadBytes(filename, buffer.byteLength, buffer);
+}
+
 // Guard against double-firing: the Open button click and the Ctrl+O
 // keydown can both reach pickAndOpen, and rapid keypress mashing or
 // programmatic invocation would otherwise race two loadBytes calls into
@@ -126,18 +146,7 @@ async function pickAndOpen() {
       return;
     }
     if (!path) return; // user canceled the OS picker
-    const filename = basename(path);
-    let bytes;
-    try {
-      // Tauri serializes Vec<u8> as a JSON number array, so the result is
-      // already iterable into Uint8Array on the JS side.
-      bytes = await invoke("read_file_bytes", { path });
-    } catch (cause) {
-      showError(`Failed to read ${filename}: ${cause}`);
-      return;
-    }
-    const buffer = new Uint8Array(bytes).buffer;
-    await loadBytes(filename, buffer.byteLength, buffer);
+    await loadFromPath(path);
   } finally {
     pickInFlight = false;
   }
