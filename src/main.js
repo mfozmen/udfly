@@ -243,12 +243,20 @@ async function drainPendingPath() {
   }
 }
 
-drainPendingPath();
-
-listen("udf-viewer://path-available", () => {
-  drainPendingPath();
-}).catch(() => {
+// Subscribe to the path-available event BEFORE draining the queue.
+// drainPendingPath awaits an invoke() round-trip; without the listener
+// already mounted, a macOS RunEvent::Opened that fires during that
+// round-trip would emit path-available with no JS handler and be lost
+// silently. Awaiting listen() first means the subscription is in place
+// before any window for the race opens.
+try {
+  await listen("udf-viewer://path-available", () => {
+    drainPendingPath();
+  });
+} catch {
   // No-op: listen() rejects when there's no Tauri event bridge available,
   // which is the case when this module is loaded outside the WebView (the
   // standalone Vite dev server during tests). Drag-drop still works.
-});
+}
+
+drainPendingPath();
