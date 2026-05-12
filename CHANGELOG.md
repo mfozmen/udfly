@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-12
+
+Adds the ways to open a `.udf` that 1.0.0 left out — a file picker and OS double-click — plus TXT/HTML export, and fixes line-spacing rendering.
+
+### Added
+
+- **File open dialog**: an **Open** button in the topbar and `Ctrl/Cmd+O` open the OS file picker; the chosen file is read through a narrow `read_file_bytes` Tauri command (no global filesystem scope — authority is bounded by the picker flow).
+- **OS file-association handoff**: double-clicking a `.udf` registered to UDF Viewer opens it — via `argv` on Windows/Linux and the `kAEOpenDocuments` Apple Event (`RunEvent::Opened`) on macOS. A FIFO queue handles a multi-file "Open With" selection; a late macOS event is picked up by a `path-available` listener.
+- **Export to TXT and HTML**: an **Export** dropdown next to **Print**. TXT writes the document's plain text (CRLF line endings on Windows). HTML writes a self-contained document — `renderToHTML` output wrapped with the renderer's CSS inlined, no external resources — suitable for opening in any browser or forwarding. Both save through a narrow `write_file_text` command.
+- **Branded application icons** replacing the Tauri scaffold placeholders.
+- **Portable Windows `.exe`** shipped alongside the NSIS installer by the release CI.
+
+### Fixed
+
+- **Line spacing**: UDF's `LineSpacing` is additive (UYAP body text ships `0.5` meaning "single plus half"), so it's now rendered as `line-height: 1 + value` (`0.5` → `1.5`) instead of a raw CSS multiplier that collapsed adjacent lines on top of each other.
+
 ## [1.0.0] - 2026-05-09
 
 Initial public release. UDF Viewer is a cross-platform Tauri 2 desktop app for opening Turkey's UYAP `.udf` document format without UYAP's Java editor.
@@ -20,5 +36,6 @@ Initial public release. UDF Viewer is a cross-platform Tauri 2 desktop app for o
 - **File association** for `.udf` registered via `tauri.conf.json` (so OS-level "Open with" lists UDF Viewer once installed).
 - **Cross-platform release CI**: `.github/workflows/release.yml` builds NSIS / DMG / AppImage / DEB / portable artifacts on tag push and uploads them to a draft GitHub Release.
 
-[unreleased]: https://github.com/mfozmen/udf-viewer/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/mfozmen/udf-viewer/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/mfozmen/udf-viewer/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mfozmen/udf-viewer/releases/tag/v1.0.0
