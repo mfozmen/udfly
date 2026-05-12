@@ -2,6 +2,7 @@ import { parseUDF } from "./parser.js";
 import { renderToHTML } from "./render.js";
 import { formatBytes } from "./format.js";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { basename } from "./path.js";
 
@@ -103,17 +104,46 @@ async function openFile(file) {
   await loadBytes(file.name, file.size, buffer);
 }
 
-// Guard against double-firing: the Open button click and the Ctrl+O
-// keydown can both reach pickAndOpen, and rapid keypress mashing or
-// programmatic invocation would otherwise race two loadBytes calls into
-// the same DOM. The flag is module-scoped because pickAndOpen has only
-// one logical caller-set (the toolbar + keyboard shortcut), not multiple
-// independent UI paths.
-let pickInFlight = false;
+// Path-driven load: invoke the Tauri read_file_bytes command on a host
+// filesystem path and pipe the result through loadBytes. Both the dialog
+// flow (pickAndOpen) and the launch-time OS-handoff flow share this — the
+// dialog provides the path interactively, the OS-handoff provides it as
+// argv or as a macOS RunEvent::Opened URL.
+async function loadFromPath(path) {
+  const filename = basename(path);
+  let bytes;
+  try {
+    // Tauri serializes Vec<u8> as a JSON number array, so the result is
+    // already iterable into Uint8Array on the JS side.
+    bytes = await invoke("read_file_bytes", { path });
+  } catch (cause) {
+    showError(`Failed to read ${filename}: ${cause}`);
+    return;
+  }
+  const buffer = new Uint8Array(bytes).buffer;
+  await loadBytes(filename, buffer.byteLength, buffer);
+}
+
+// Single in-flight guard shared across every code path that ends in
+// loadBytes — the Open button + Ctrl+O picker, and the OS-handoff queue
+// drain. The original guard only covered the picker (rapid keypress
+// mashing on Ctrl+O) but a near-simultaneous Apple Event drain racing the
+// user's dialog open could still land two loadBytes calls on the same
+// DOM. One module-scoped flag serializes both.
+//
+// drainPending records "drainPendingPath was called while loadInFlight
+// was already true." Without it, a path-available emit that arrives
+// while the picker is up would be consumed without ever triggering a
+// drain — the path would sit in the Rust queue until the app restarts.
+// Both finally blocks check drainPending and re-trigger the drain on
+// the way out so the queued path is picked up as soon as the in-flight
+// load releases the guard.
+let loadInFlight = false;
+let drainPending = false;
 
 async function pickAndOpen() {
-  if (pickInFlight) return;
-  pickInFlight = true;
+  if (loadInFlight) return;
+  loadInFlight = true;
   try {
     let path;
     try {
@@ -126,20 +156,13 @@ async function pickAndOpen() {
       return;
     }
     if (!path) return; // user canceled the OS picker
-    const filename = basename(path);
-    let bytes;
-    try {
-      // Tauri serializes Vec<u8> as a JSON number array, so the result is
-      // already iterable into Uint8Array on the JS side.
-      bytes = await invoke("read_file_bytes", { path });
-    } catch (cause) {
-      showError(`Failed to read ${filename}: ${cause}`);
-      return;
-    }
-    const buffer = new Uint8Array(bytes).buffer;
-    await loadBytes(filename, buffer.byteLength, buffer);
+    await loadFromPath(path);
   } finally {
-    pickInFlight = false;
+    loadInFlight = false;
+    if (drainPending) {
+      drainPending = false;
+      drainPendingPath();
+    }
   }
 }
 
@@ -207,3 +230,62 @@ window.addEventListener("keydown", (e) => {
 });
 
 showState("empty");
+
+// Drain any OS-handoff paths the backend has queued. On Windows / Linux a
+// double-click of a registered .udf gets the path queued from argv before
+// the frontend mounts, so the initial drain on startup picks it up. On
+// macOS the path arrives via RunEvent::Opened, which can happen before or
+// after the frontend mounts — drain on startup AND listen for the
+// udf-viewer://path-available event for any later arrivals.
+//
+// Looping until take_pending_path returns null handles the multi-file
+// Apple Event: a "Open With → UDF Viewer" against several selected .udf
+// files lands every path in the backend's FIFO queue but emits the event
+// only once. Without the loop, only the head of the queue would open and
+// the rest would sit unconsumed until the next event.
+async function drainPendingPath() {
+  if (loadInFlight) {
+    // Picker or another drain is mid-load. Record the want-to-drain so
+    // the in-flight finally block re-triggers us once the guard frees.
+    drainPending = true;
+    return;
+  }
+  loadInFlight = true;
+  drainPending = false;
+  try {
+    while (true) {
+      let path;
+      try {
+        path = await invoke("take_pending_path");
+      } catch {
+        return; // backend not available (e.g. running in plain browser) — silently skip
+      }
+      if (!path) return;
+      await loadFromPath(path);
+    }
+  } finally {
+    loadInFlight = false;
+    if (drainPending) {
+      drainPending = false;
+      drainPendingPath();
+    }
+  }
+}
+
+// Subscribe to the path-available event BEFORE draining the queue.
+// drainPendingPath awaits an invoke() round-trip; without the listener
+// already mounted, a macOS RunEvent::Opened that fires during that
+// round-trip would emit path-available with no JS handler and be lost
+// silently. Awaiting listen() first means the subscription is in place
+// before any window for the race opens.
+try {
+  await listen("udf-viewer://path-available", () => {
+    drainPendingPath();
+  });
+} catch {
+  // No-op: listen() rejects when there's no Tauri event bridge available,
+  // which is the case when this module is loaded outside the WebView (the
+  // standalone Vite dev server during tests). Drag-drop still works.
+}
+
+drainPendingPath();
