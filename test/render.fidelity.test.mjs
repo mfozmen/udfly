@@ -121,3 +121,89 @@ test("renderToHTML renders a header whose startPage is within the page count", (
   const html = renderToHTML(parsed);
   assert.match(html, /<div[^>]*class="udf-header"[^>]*>/);
 });
+
+// --- TabSet tab alignment -------------------------------------------------
+
+test("renderToHTML advances tabbed content to the paragraph's TabSet stop", () => {
+  // A paragraph with TabSet "297.0:0:0" and a tab between two runs must put
+  // the text after the tab at 297pt from the line start — the official
+  // viewer aligns the second column there. Modeled as an inline-block of
+  // min-width 297pt wrapping the pre-tab content.
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: { tabSet: "297.0:0:0" },
+        runs: [
+          { text: "Perihan AK YURDAKUL", kind: "content", style: {} },
+          { text: "\t", kind: "tab", style: {} },
+          { text: "IBRAHIM KURSUN", kind: "content", style: {} },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.match(
+    html,
+    /<span[^>]*display:\s*inline-block[^>]*min-width:\s*297pt[^>]*>(?:<[^>]*>)*Perihan AK YURDAKUL/,
+    "expected the pre-tab content in a 297pt-min-width inline-block"
+  );
+  assert.ok(html.includes("IBRAHIM KURSUN"), "post-tab content still renders");
+  assert.ok(
+    !/min-width[^>]*>(?:<[^>]*>)*IBRAHIM KURSUN/.test(html),
+    "post-tab content flows freely, not inside a tab box"
+  );
+});
+
+test("renderToHTML uses successive TabSet stops for successive tabs", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: { tabSet: "30.0:0:0,80.0:0:0" },
+        runs: [
+          { text: "a", kind: "content", style: {} },
+          { text: "\t", kind: "tab", style: {} },
+          { text: "b", kind: "content", style: {} },
+          { text: "\t", kind: "tab", style: {} },
+          { text: "c", kind: "content", style: {} },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  // First segment box reaches the first stop (30pt); the second box spans
+  // from the first stop to the second (80-30 = 50pt); the last segment flows.
+  assert.match(html, /min-width:\s*30pt[^>]*>(?:<[^>]*>)*a</);
+  assert.match(html, /min-width:\s*50pt[^>]*>(?:<[^>]*>)*b</);
+  assert.match(html, /<span>c<\/span><\/p>$/);
+  assert.ok(!/min-width[^>]*>(?:<[^>]*>)*c</.test(html), "last segment is not in a tab box");
+});
+
+test("renderToHTML leaves tabs untouched when the paragraph has no TabSet", () => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      {
+        type: "paragraph",
+        style: {},
+        runs: [
+          { text: "a", kind: "content", style: {} },
+          { text: "\t", kind: "tab", style: {} },
+          { text: "b", kind: "content", style: {} },
+        ],
+      },
+    ],
+  };
+  const html = renderToHTML(parsed);
+  assert.ok(!/inline-block/.test(html), "no inline-block boxes without a TabSet");
+  assert.ok(html.includes("\t"), "the literal tab character is still emitted");
+});
