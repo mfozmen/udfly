@@ -7,7 +7,9 @@
     "tauri": "tauri",
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test",
+    "test": "node --test && cargo test --manifest-path src-tauri/Cargo.toml",
+    "test:js": "node --test",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "test:parser": "node --test test/parser.test.mjs"
   },
   "devDependencies": {
