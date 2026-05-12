@@ -7,6 +7,38 @@ export function renderToHTML(parsed) {
   return parts.join("");
 }
 
+// CSS the export needs to keep .udf-header / .udf-footer / .udf-table visually
+// faithful to the viewer when the exported HTML is opened standalone in a
+// browser. Mirrors the renderer-class rules in src/styles.css (page typography,
+// header/footer dimming, table borders) without dragging in the app chrome.
+// The page surface keeps the 800px max-width centered with the same padding
+// the viewer uses so paragraph widths match.
+const EXPORT_CSS = `body { margin: 0; background: #fff; }
+.page { max-width: 800px; margin: 50px auto; padding: 0 60px; font-family: "Times New Roman", "Times", Georgia, serif; font-size: 12pt; line-height: 1.4; color: #000; }
+.page p { margin: 0; }
+.page .udf-header, .page .udf-footer { font-size: 10pt; color: #6e6e73; margin-bottom: 16px; }
+.page .udf-footer { margin-top: 32px; margin-bottom: 0; }
+.page .udf-table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+.page .udf-table td { border: 1px solid #e0e0e0; padding: 4pt 8pt; vertical-align: top; }`;
+
+// Wrap renderToHTML output in a self-contained HTML5 document for export.
+// No external resources, no scripts — opening the file offline or forwarding
+// it to a colleague who can't reach our origin must still render correctly.
+// The body content is renderToHTML output verbatim so the exported file
+// stays visually faithful to the viewer (same escaping, same wrappers).
+export function renderToStandaloneHTML(parsed) {
+  const body = renderToHTML(parsed);
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UDF Document</title>
+<style>${EXPORT_CSS}</style>
+</head>
+<body><div class="page">${body}</div></body>
+</html>`;
+}
+
 function renderElement(element) {
   switch (element.type) {
     case "paragraph":
