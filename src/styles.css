@@ -87,6 +87,51 @@ body {
   gap: 8px;
 }
 
+.topbar__export {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background-color: var(--color-chrome-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px var(--color-page-shadow);
+  list-style: none;
+  padding: 4px 0;
+  min-width: 160px;
+  z-index: 10;
+}
+
+.dropdown-menu[hidden] {
+  display: none;
+}
+
+.dropdown-menu__item {
+  display: block;
+  width: 100%;
+  padding: 6px 16px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--color-chrome-fg);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dropdown-menu__item:hover:not(:disabled) {
+  background-color: var(--color-bg);
+}
+
+.dropdown-menu__item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
 /* buttons */
 .btn {
   font-family: inherit;
