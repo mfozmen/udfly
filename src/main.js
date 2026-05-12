@@ -1,9 +1,13 @@
 import { parseUDF } from "./parser.js";
 import { renderToHTML } from "./render.js";
 import { formatBytes } from "./format.js";
+import { invoke } from "@tauri-apps/api/core";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { basename } from "./path.js";
 
 const els = {
   filename: document.getElementById("filename"),
+  openBtn: document.getElementById("open-btn"),
   printBtn: document.getElementById("print-btn"),
   emptyState: document.getElementById("empty-state"),
   pageView: document.getElementById("page-view"),
@@ -16,6 +20,7 @@ const els = {
   sizeInfo: document.getElementById("size-info"),
   verificationInfo: document.getElementById("verification-info"),
 };
+
 
 function showState(name) {
   els.emptyState.hidden = name !== "empty";
@@ -68,15 +73,8 @@ function showError(message) {
   els.printBtn.disabled = true;
 }
 
-async function openFile(file) {
-  setFilename(file.name);
-  let buffer;
-  try {
-    buffer = await file.arrayBuffer();
-  } catch (cause) {
-    showError(`Failed to read ${file.name}: ${cause.message}`);
-    return;
-  }
+async function loadBytes(filename, sizeBytes, buffer) {
+  setFilename(filename);
   let parsed;
   try {
     parsed = await parseUDF(buffer);
@@ -87,11 +85,62 @@ async function openFile(file) {
   paintPage(renderToHTML(parsed));
   setStatus({
     pages: parsed.pages,
-    sizeBytes: file.size,
+    sizeBytes,
     verificationCode: parsed.verificationCode,
   });
   els.printBtn.disabled = false;
   showState("page");
+}
+
+async function openFile(file) {
+  let buffer;
+  try {
+    buffer = await file.arrayBuffer();
+  } catch (cause) {
+    showError(`Failed to read ${file.name}: ${cause.message}`);
+    return;
+  }
+  await loadBytes(file.name, file.size, buffer);
+}
+
+// Guard against double-firing: the Open button click and the Ctrl+O
+// keydown can both reach pickAndOpen, and rapid keypress mashing or
+// programmatic invocation would otherwise race two loadBytes calls into
+// the same DOM. The flag is module-scoped because pickAndOpen has only
+// one logical caller-set (the toolbar + keyboard shortcut), not multiple
+// independent UI paths.
+let pickInFlight = false;
+
+async function pickAndOpen() {
+  if (pickInFlight) return;
+  pickInFlight = true;
+  try {
+    let path;
+    try {
+      path = await openDialog({
+        multiple: false,
+        filters: [{ name: "UDF Document", extensions: ["udf"] }],
+      });
+    } catch (cause) {
+      showError(cause.message || String(cause));
+      return;
+    }
+    if (!path) return; // user canceled the OS picker
+    const filename = basename(path);
+    let bytes;
+    try {
+      // Tauri serializes Vec<u8> as a JSON number array, so the result is
+      // already iterable into Uint8Array on the JS side.
+      bytes = await invoke("read_file_bytes", { path });
+    } catch (cause) {
+      showError(`Failed to read ${filename}: ${cause}`);
+      return;
+    }
+    const buffer = new Uint8Array(bytes).buffer;
+    await loadBytes(filename, buffer.byteLength, buffer);
+  } finally {
+    pickInFlight = false;
+  }
 }
 
 function isUdfFile(file) {
@@ -132,6 +181,10 @@ window.addEventListener("drop", async (e) => {
   await openFile(file);
 });
 
+els.openBtn.addEventListener("click", () => {
+  pickAndOpen();
+});
+
 els.printBtn.addEventListener("click", () => {
   if (!els.printBtn.disabled) window.print();
 });
@@ -142,11 +195,14 @@ els.errorRetry.addEventListener("click", () => {
 });
 
 window.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
-    if (!els.printBtn.disabled) {
-      e.preventDefault();
-      window.print();
-    }
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const key = e.key.toLowerCase();
+  if (key === "o") {
+    e.preventDefault();
+    pickAndOpen();
+  } else if (key === "p" && !els.printBtn.disabled) {
+    e.preventDefault();
+    window.print();
   }
 });
 

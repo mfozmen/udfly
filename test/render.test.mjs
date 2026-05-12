@@ -108,21 +108,60 @@ test("renderToHTML sets white-space: pre-wrap on every paragraph", async () => {
   );
 });
 
-test("renderToHTML applies lineSpacing as inline line-height multiplier", () => {
-  const parsed = {
-    text: "",
-    pages: 1,
-    properties: {},
-    elements: [
-      {
-        type: "paragraph",
-        style: { lineSpacing: 1.5 },
-        runs: [{ text: "x", kind: "content", style: {} }],
-      },
-    ],
-  };
+test("renderToHTML renders the application fixture's contact block without line-height collapse", async () => {
+  const buffer = await loadFixture("fixture-mediation-application.udf");
+  const parsed = await parseUDF(buffer);
   const html = renderToHTML(parsed);
-  assert.ok(/<p[^>]*line-height:\s*1\.5[^>]*>/.test(html), "expected line-height: 1.5");
+  // Regression for #7. Every contact-block paragraph in this fixture has
+  // lineSpacing 0.5; the broken state shipped a literal CSS line-height of
+  // 0.5 (or 0.<n> for other lineSpacing values), collapsing adjacent
+  // lines on top of each other. The regex requires the decimal point
+  // explicitly so it can't accidentally match a future, valid
+  // line-height: 0 emitted as a sentinel — only the broken sub-1
+  // fractional values are flagged.
+  const subOneFractional = html.match(/line-height:\s*0\.\d+/g) || [];
+  assert.equal(
+    subOneFractional.length,
+    0,
+    `no paragraph should carry a fractional sub-1 line-height; found ${subOneFractional.length}: ${subOneFractional.slice(0, 3).join(", ")}`
+  );
+});
+
+test("renderToHTML interprets lineSpacing as extra line-height on top of single spacing", () => {
+  // UDF's LineSpacing is additive — UYAP's body-text paragraphs ship with
+  // values like 0.5 meaning "half a line of extra space" (1.5x total),
+  // matching the Java text framework UYAP is built on. Treating it as a
+  // raw CSS line-height multiplier (0.5 → line-height: 0.5) would collapse
+  // the lines on top of each other; the renderer must emit
+  // line-height: (1 + lineSpacing). Two data points pin the formula —
+  // a single data point would let `lineSpacing * 2` pass coincidentally.
+  function renderWithLineSpacing(value) {
+    return renderToHTML({
+      text: "",
+      pages: 1,
+      properties: {},
+      elements: [
+        {
+          type: "paragraph",
+          style: { lineSpacing: value },
+          runs: [{ text: "x", kind: "content", style: {} }],
+        },
+      ],
+    });
+  }
+  // 0.5 → 1.5 ("single plus half"), the common UYAP body-text value.
+  assert.ok(
+    /<p[^>]*line-height:\s*1\.5[^>]*>/.test(renderWithLineSpacing(0.5)),
+    "lineSpacing 0.5 should render as line-height 1.5"
+  );
+  // 1.0 → 2.0 (double spacing). Catches a hypothetical wrong formula
+  // like `lineSpacing * 3` (0.5 → 1.5, but 1.0 → 3.0) or
+  // `0.5 + lineSpacing * 2` (0.5 → 1.5, but 1.0 → 2.5) that would
+  // coincidentally pass the first assertion while breaking the formula.
+  assert.ok(
+    /<p[^>]*line-height:\s*2(?!\.\d|\d)[^>]*>/.test(renderWithLineSpacing(1.0)),
+    "lineSpacing 1.0 should render as line-height 2 (double spacing)"
+  );
 });
 
 test("renderToHTML applies spaceBelow as inline margin-bottom in pt", () => {
