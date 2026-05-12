@@ -12,11 +12,13 @@ export function defaultExportName(filename, extension) {
 // UDF text comes out of the XML parser with line endings normalized to "\n".
 // On Windows — UYAP's dominant platform — pre-2018 Notepad and various
 // legacy tools render "\n"-only files as one long line, so the TXT export
-// needs CRLF there. The frontend bundle is platform-agnostic, so this is a
-// runtime userAgent check rather than a build-time cfg.
-function withPlatformLineEndings(text) {
-  const ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
-  return /windows/i.test(ua) ? text.replace(/\r?\n/g, "\r\n") : text;
+// needs CRLF there. The frontend bundle is platform-agnostic, so the OS is
+// read from the userAgent at runtime rather than a build-time cfg; it's
+// passed in (not read from `navigator` here) to keep this a pure function.
+export function withPlatformLineEndings(text, userAgent) {
+  return /windows/i.test(userAgent || "")
+    ? text.replace(/\r?\n/g, "\r\n")
+    : text;
 }
 
 // Wire the Export dropdown: toggle on the trigger, close on Escape /
@@ -77,7 +79,9 @@ export function setupExportMenu({ els, getDocument, saveDialog, invoke }) {
     let contents;
     if (format === "txt") {
       filters = [{ name: "Plain Text", extensions: ["txt"] }];
-      contents = withPlatformLineEndings(doc.parsed.text);
+      const ua =
+        (typeof navigator !== "undefined" && navigator.userAgent) || "";
+      contents = withPlatformLineEndings(doc.parsed.text, ua);
     } else {
       filters = [{ name: "HTML Document", extensions: ["html"] }];
       contents = renderToStandaloneHTML(doc.parsed);
