@@ -67,9 +67,17 @@ function parseElementNode(node, cdata, styleMap) {
     case "table":
       return parseTable(node, cdata, styleMap);
     case "header":
-      return { type: "header", paragraphs: collectParagraphs(node, cdata, styleMap) };
+      return {
+        type: "header",
+        startPage: parseIntAttr(node, "startPage", 1),
+        paragraphs: collectParagraphs(node, cdata, styleMap),
+      };
     case "footer":
-      return { type: "footer", paragraphs: collectParagraphs(node, cdata, styleMap) };
+      return {
+        type: "footer",
+        startPage: parseIntAttr(node, "startPage", 1),
+        paragraphs: collectParagraphs(node, cdata, styleMap),
+      };
     default:
       return null;
   }

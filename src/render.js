@@ -1,7 +1,8 @@
 export function renderToHTML(parsed) {
+  const pages = typeof parsed.pages === "number" ? parsed.pages : Infinity;
   const parts = [];
   for (const element of parsed.elements) {
-    const html = renderElement(element);
+    const html = renderElement(element, pages);
     if (html) parts.push(html);
   }
   return parts.join("");
@@ -40,16 +41,24 @@ export function renderToStandaloneHTML(parsed) {
 </html>`;
 }
 
-function renderElement(element) {
+function renderElement(element, pages) {
   switch (element.type) {
     case "paragraph":
       return renderParagraph(element);
     case "table":
       return renderTable(element);
     case "header":
-      return renderWrapper("udf-header", element.paragraphs);
-    case "footer":
-      return renderWrapper("udf-footer", element.paragraphs);
+    case "footer": {
+      // A header/footer whose startPage is past the document's page count is
+      // furniture for pages we don't have, so it never appears. (We render an
+      // unpaginated flow, so an in-range one lands at the top/bottom of the
+      // body — the best we can do without real pagination.)
+      if (typeof element.startPage === "number" && element.startPage > pages) {
+        return "";
+      }
+      const className = element.type === "header" ? "udf-header" : "udf-footer";
+      return renderWrapper(className, element.paragraphs);
+    }
     default:
       return "";
   }
