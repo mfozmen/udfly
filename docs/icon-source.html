@@ -25,6 +25,10 @@
         padding: 0;
         width: 1024px;
         height: 1024px;
+        /* overflow:hidden so a viewport-capture tool can't pick up scroll-
+           bars when the regen happens at a DPI scale that makes the body
+           taller than the visible area. */
+        overflow: hidden;
       }
       .icon {
         width: 1024px;
