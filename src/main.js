@@ -124,17 +124,17 @@ async function loadFromPath(path) {
   await loadBytes(filename, buffer.byteLength, buffer);
 }
 
-// Guard against double-firing: the Open button click and the Ctrl+O
-// keydown can both reach pickAndOpen, and rapid keypress mashing or
-// programmatic invocation would otherwise race two loadBytes calls into
-// the same DOM. The flag is module-scoped because pickAndOpen has only
-// one logical caller-set (the toolbar + keyboard shortcut), not multiple
-// independent UI paths.
-let pickInFlight = false;
+// Single in-flight guard shared across every code path that ends in
+// loadBytes — the Open button + Ctrl+O picker, and the OS-handoff queue
+// drain. The original guard only covered the picker (rapid keypress
+// mashing on Ctrl+O) but a near-simultaneous Apple Event drain racing the
+// user's dialog open could still land two loadBytes calls on the same
+// DOM. One module-scoped flag serializes both.
+let loadInFlight = false;
 
 async function pickAndOpen() {
-  if (pickInFlight) return;
-  pickInFlight = true;
+  if (loadInFlight) return;
+  loadInFlight = true;
   try {
     let path;
     try {
@@ -149,7 +149,7 @@ async function pickAndOpen() {
     if (!path) return; // user canceled the OS picker
     await loadFromPath(path);
   } finally {
-    pickInFlight = false;
+    loadInFlight = false;
   }
 }
 
@@ -231,15 +231,21 @@ showState("empty");
 // only once. Without the loop, only the head of the queue would open and
 // the rest would sit unconsumed until the next event.
 async function drainPendingPath() {
-  while (true) {
-    let path;
-    try {
-      path = await invoke("take_pending_path");
-    } catch {
-      return; // backend not available (e.g. running in plain browser) — silently skip
+  if (loadInFlight) return; // shared guard with pickAndOpen serializes loads
+  loadInFlight = true;
+  try {
+    while (true) {
+      let path;
+      try {
+        path = await invoke("take_pending_path");
+      } catch {
+        return; // backend not available (e.g. running in plain browser) — silently skip
+      }
+      if (!path) return;
+      await loadFromPath(path);
     }
-    if (!path) return;
-    await loadFromPath(path);
+  } finally {
+    loadInFlight = false;
   }
 }
 
