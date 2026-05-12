@@ -218,20 +218,29 @@ window.addEventListener("keydown", (e) => {
 
 showState("empty");
 
-// Drain any OS-handoff path the backend has queued. On Windows / Linux a
+// Drain any OS-handoff paths the backend has queued. On Windows / Linux a
 // double-click of a registered .udf gets the path queued from argv before
 // the frontend mounts, so the initial drain on startup picks it up. On
 // macOS the path arrives via RunEvent::Opened, which can happen before or
-// after the frontend mounts — drain once now, then listen for the
+// after the frontend mounts — drain on startup AND listen for the
 // udf-viewer://path-available event for any later arrivals.
+//
+// Looping until take_pending_path returns null handles the multi-file
+// Apple Event: a "Open With → UDF Viewer" against several selected .udf
+// files lands every path in the backend's FIFO queue but emits the event
+// only once. Without the loop, only the head of the queue would open and
+// the rest would sit unconsumed until the next event.
 async function drainPendingPath() {
-  let path;
-  try {
-    path = await invoke("take_pending_path");
-  } catch {
-    return; // backend not available (e.g. running in plain browser) — silently skip
+  while (true) {
+    let path;
+    try {
+      path = await invoke("take_pending_path");
+    } catch {
+      return; // backend not available (e.g. running in plain browser) — silently skip
+    }
+    if (!path) return;
+    await loadFromPath(path);
   }
-  if (path) await loadFromPath(path);
 }
 
 drainPendingPath();
