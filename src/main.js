@@ -130,7 +130,16 @@ async function loadFromPath(path) {
 // mashing on Ctrl+O) but a near-simultaneous Apple Event drain racing the
 // user's dialog open could still land two loadBytes calls on the same
 // DOM. One module-scoped flag serializes both.
+//
+// drainPending records "drainPendingPath was called while loadInFlight
+// was already true." Without it, a path-available emit that arrives
+// while the picker is up would be consumed without ever triggering a
+// drain — the path would sit in the Rust queue until the app restarts.
+// Both finally blocks check drainPending and re-trigger the drain on
+// the way out so the queued path is picked up as soon as the in-flight
+// load releases the guard.
 let loadInFlight = false;
+let drainPending = false;
 
 async function pickAndOpen() {
   if (loadInFlight) return;
@@ -150,6 +159,10 @@ async function pickAndOpen() {
     await loadFromPath(path);
   } finally {
     loadInFlight = false;
+    if (drainPending) {
+      drainPending = false;
+      drainPendingPath();
+    }
   }
 }
 
@@ -231,8 +244,14 @@ showState("empty");
 // only once. Without the loop, only the head of the queue would open and
 // the rest would sit unconsumed until the next event.
 async function drainPendingPath() {
-  if (loadInFlight) return; // shared guard with pickAndOpen serializes loads
+  if (loadInFlight) {
+    // Picker or another drain is mid-load. Record the want-to-drain so
+    // the in-flight finally block re-triggers us once the guard frees.
+    drainPending = true;
+    return;
+  }
   loadInFlight = true;
+  drainPending = false;
   try {
     while (true) {
       let path;
@@ -246,6 +265,10 @@ async function drainPendingPath() {
     }
   } finally {
     loadInFlight = false;
+    if (drainPending) {
+      drainPending = false;
+      drainPendingPath();
+    }
   }
 }
 
