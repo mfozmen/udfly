@@ -21,6 +21,41 @@
         >
           Open
         </button>
+        <div class="topbar__export">
+          <button
+            class="btn"
+            id="export-btn"
+            type="button"
+            disabled
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="export-menu"
+          >
+            Export
+          </button>
+          <ul class="dropdown-menu" id="export-menu" role="menu" hidden>
+            <li role="none">
+              <button
+                class="dropdown-menu__item"
+                id="export-txt"
+                type="button"
+                role="menuitem"
+              >
+                Export as TXT
+              </button>
+            </li>
+            <li role="none">
+              <button
+                class="dropdown-menu__item"
+                id="export-html"
+                type="button"
+                role="menuitem"
+              >
+                Export as HTML
+              </button>
+            </li>
+          </ul>
+        </div>
         <button
           class="btn"
           id="print-btn"

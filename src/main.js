@@ -1,15 +1,19 @@
 import { parseUDF } from "./parser.js";
-import { renderToHTML } from "./render.js";
+import { renderToHTML, renderToStandaloneHTML } from "./render.js";
 import { formatBytes } from "./format.js";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { basename } from "./path.js";
 
 const els = {
   filename: document.getElementById("filename"),
   openBtn: document.getElementById("open-btn"),
   printBtn: document.getElementById("print-btn"),
+  exportBtn: document.getElementById("export-btn"),
+  exportMenu: document.getElementById("export-menu"),
+  exportTxt: document.getElementById("export-txt"),
+  exportHtml: document.getElementById("export-html"),
   emptyState: document.getElementById("empty-state"),
   pageView: document.getElementById("page-view"),
   page: document.getElementById("page"),
@@ -21,6 +25,12 @@ const els = {
   sizeInfo: document.getElementById("size-info"),
   verificationInfo: document.getElementById("verification-info"),
 };
+
+// Cached parse result so the export handlers can re-serialize without
+// re-reading the source UDF. Cleared on showError() so a stale doc can't
+// be exported while the error overlay is showing.
+let currentParsed = null;
+let currentFilename = "";
 
 
 function showState(name) {
@@ -72,6 +82,10 @@ function showError(message) {
   els.errorMessage.textContent = message;
   showState("error");
   els.printBtn.disabled = true;
+  els.exportBtn.disabled = true;
+  closeExportMenu();
+  currentParsed = null;
+  currentFilename = "";
 }
 
 async function loadBytes(filename, sizeBytes, buffer) {
@@ -83,6 +97,8 @@ async function loadBytes(filename, sizeBytes, buffer) {
     showError(cause.message || String(cause));
     return;
   }
+  currentParsed = parsed;
+  currentFilename = filename;
   paintPage(renderToHTML(parsed));
   setStatus({
     pages: parsed.pages,
@@ -90,6 +106,7 @@ async function loadBytes(filename, sizeBytes, buffer) {
     verificationCode: parsed.verificationCode,
   });
   els.printBtn.disabled = false;
+  els.exportBtn.disabled = false;
   showState("page");
 }
 
@@ -210,6 +227,96 @@ els.openBtn.addEventListener("click", () => {
 
 els.printBtn.addEventListener("click", () => {
   if (!els.printBtn.disabled) window.print();
+});
+
+// Strip the .udf extension so the OS save dialog suggests "foo.txt" / "foo.html"
+// from "foo.udf" rather than the more awkward "foo.udf.txt".
+function defaultExportName(extension) {
+  const base = currentFilename.replace(/\.udf$/i, "");
+  return base ? `${base}.${extension}` : `document.${extension}`;
+}
+
+function openExportMenu() {
+  els.exportMenu.hidden = false;
+  els.exportBtn.setAttribute("aria-expanded", "true");
+}
+
+function closeExportMenu() {
+  els.exportMenu.hidden = true;
+  els.exportBtn.setAttribute("aria-expanded", "false");
+}
+
+function toggleExportMenu() {
+  if (els.exportMenu.hidden) openExportMenu();
+  else closeExportMenu();
+}
+
+els.exportBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (els.exportBtn.disabled) return;
+  toggleExportMenu();
+});
+
+// Click outside the menu closes it. Stop propagation on the menu itself so a
+// click on an item bubbles to the item's own handler (which closes the menu)
+// rather than this catch-all that also closes — net effect is the same, but
+// keeping the menu's click contained avoids re-entrancy if more handlers land.
+document.addEventListener("click", (e) => {
+  if (els.exportMenu.hidden) return;
+  if (!els.exportMenu.contains(e.target) && e.target !== els.exportBtn) {
+    closeExportMenu();
+  }
+});
+
+// Escape closes the menu and returns focus to the trigger so keyboard users
+// don't get stranded.
+els.exportMenu.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeExportMenu();
+    els.exportBtn.focus();
+  }
+});
+
+async function exportAs(format) {
+  if (!currentParsed) return;
+  let filters;
+  let contents;
+  if (format === "txt") {
+    filters = [{ name: "Plain Text", extensions: ["txt"] }];
+    contents = currentParsed.text;
+  } else {
+    filters = [{ name: "HTML Document", extensions: ["html"] }];
+    contents = renderToStandaloneHTML(currentParsed);
+  }
+  let path;
+  try {
+    path = await saveDialog({
+      defaultPath: defaultExportName(format),
+      filters,
+    });
+  } catch (cause) {
+    // Save failures shouldn't wipe the loaded document — the user's view
+    // wasn't broken, only the export. Surface via alert() so the page stays
+    // intact and they can retry.
+    window.alert(`Export failed: ${cause.message || cause}`);
+    return;
+  }
+  if (!path) return; // user canceled the save picker
+  try {
+    await invoke("write_file_text", { path, contents });
+  } catch (cause) {
+    window.alert(`Failed to save: ${cause}`);
+  }
+}
+
+els.exportTxt.addEventListener("click", () => {
+  closeExportMenu();
+  exportAs("txt");
+});
+
+els.exportHtml.addEventListener("click", () => {
+  closeExportMenu();
+  exportAs("html");
 });
 
 els.errorRetry.addEventListener("click", () => {
