@@ -26,6 +26,13 @@ Thumbs.db
 # Claude Code local config
 .claude/settings.local.json
 
+# Scratch from tools that occasionally write to a Windows absolute path on
+# a POSIX-style git view, landing the path itself as a filename in the
+# working tree (e.g. "C:UsersfahriAppDataLocalTemp..."). The colon is
+# illegal in NTFS filenames, so any file whose name starts with `C:` is
+# never legitimate project content.
+C:*
+
 # Environment
 .env
 .env.local
