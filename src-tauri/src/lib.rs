@@ -31,12 +31,12 @@ fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
     std::fs::read(&path).map_err(|e| e.to_string())
 }
 
-// Write UTF-8 text to a path the user picked via the save dialog. Mirrors
-// read_file_bytes's authority model: JS only has the path because the user
-// just chose it in the OS save picker, so we don't need a global fs scope.
-// UDF exports (TXT and HTML) are both small text payloads — synchronous
-// fs::write is fine, and stringified errors surface to JS so the UI can
-// show why an export failed (permissions, disk full, etc).
+// Mirrors read_file_bytes's authority model: JS only has this path because
+// the user just chose it in the OS save picker, so the writeable fs surface
+// stays bounded by the dialog UI flow rather than needing a global fs scope.
+// UDF exports (TXT and HTML) are both small text payloads, so synchronous
+// fs::write is fine; stringified errors surface to JS so the UI can show why
+// an export failed (permissions, disk full, etc).
 #[tauri::command]
 fn write_file_text(path: String, contents: String) -> Result<(), String> {
     std::fs::write(&path, contents).map_err(|e| e.to_string())
