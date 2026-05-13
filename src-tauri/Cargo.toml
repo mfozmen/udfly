@@ -1,7 +1,7 @@
 [package]
-name = "udf-viewer"
+name = "udfly"
 version = "1.1.1"
-description = "Cross-platform desktop viewer for Turkey's UYAP .udf documents"
+description = "A fast, portable viewer for UYAP .udf documents"
 authors = ["Mehmet Fahri Özmen <mehmetfahriozmen@gmail.com>"]
 edition = "2021"
 
@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "udf_viewer_lib"
+name = "udfly_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

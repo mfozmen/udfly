@@ -1,4 +1,4 @@
-# Claude Code Brief — UDF Viewer (Cross-platform Tauri App)
+# Claude Code Brief — Udfly (Cross-platform Tauri App)
 
 > **How to use this file**: This is a multi-stage brief. Give Stage 0 to Claude Code first, wait for it to finish, then give Stage 1, etc. Don't paste everything at once — keep each stage focused so Claude Code can iterate.
 
@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-Build a **cross-platform desktop UDF viewer** for Turkey's UYAP (judicial information system) `.udf` document format.
+Build a **fast, portable viewer** for Turkey's UYAP (judicial information system) `.udf` documents.
 
 - **Target users**: Turkish lawyers and citizens who receive `.udf` files and need to view them without installing UYAP's broken Java-based editor.
 - **Distribution**: GitHub releases with portable binaries for Windows, macOS, and Linux. Users should be able to download and run — no installer required (or at least an installer-free option).
@@ -186,7 +186,7 @@ Each element may have `resolver="style-name"`. This refers to a `<style>` defini
 ## Stage 0 — Project bootstrap
 
 ```
-Initialize a new Tauri 2 project named "udf-viewer".
+Initialize a new Tauri 2 project named "udfly".
 
 Requirements:
 - Tauri 2.x (latest stable)
@@ -200,8 +200,8 @@ Requirements:
   - README.md, LICENSE (MIT)
 
 Tauri config requirements:
-- App name: "UDF Viewer"
-- Bundle identifier: "com.udfviewer.app"
+- App name: "Udfly"
+- Bundle identifier: "com.udfly.app"
 - Window: 1100x800, resizable, min 600x400
 - File association: register .udf so OS treats this app as a handler (configure tauri.conf.json's bundle.fileAssociations)
 - The window should accept files via CLI arg AND drag-and-drop AND file-open dialog
@@ -212,7 +212,7 @@ Frontend dependencies (installed via npm):
 Rust dependencies (Cargo):
 - Just default Tauri deps. We will only use Rust for: opening file dialogs, reading CLI args, and (later) registering as default handler for .udf.
 
-After scaffolding, the app should launch with a placeholder UI showing "UDF Viewer — drop a .udf file here". Verify it builds and runs on the current platform.
+After scaffolding, the app should launch with a placeholder UI showing "Udfly — drop a .udf file here". Verify it builds and runs on the current platform.
 
 Do NOT yet implement the parser — that's the next stage.
 ```
@@ -321,7 +321,7 @@ UI (src/index.html, src/main.js, src/styles.css):
 
 Layout:
 +----------------------------------------------------------+
-| [≡] UDF Viewer        evrak_xxx.udf    [Print] [Export▾] |  ← top bar, 44px tall, subtle bottom border
+| [≡] Udfly             evrak_xxx.udf    [Print] [Export▾] |  ← top bar, 44px tall, subtle bottom border
 +----------------------------------------------------------+
 |                                                          |
 |   [empty state: dashed dropzone with "Drop .udf here"]   |

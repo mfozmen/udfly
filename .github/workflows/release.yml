@@ -78,7 +78,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
-              name: `UDF Viewer ${tag}`,
+              name: `Udfly ${tag}`,
               body: [
                 `See [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/${tag}/CHANGELOG.md) for the release notes.`,
                 '',
@@ -160,7 +160,7 @@ jobs:
           args: ${{ matrix.args }}
 
       # Tauri 2's NSIS bundler doesn't expose a portable mode, but the
-      # raw target/release/udf-viewer.exe Cargo produces is already a
+      # raw target/release/udfly.exe Cargo produces is already a
       # self-contained Tauri binary (depends only on WebView2, which
       # ships with Windows 11 and modern Windows 10). Append it to the
       # draft Release the tauri-action step targeted so the install
@@ -180,8 +180,8 @@ jobs:
           RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ARTIFACT="UDF-Viewer_${VERSION}_x64-portable.exe"
-          cp src-tauri/target/release/udf-viewer.exe "$ARTIFACT"
+          ARTIFACT="Udfly_${VERSION}_x64-portable.exe"
+          cp src-tauri/target/release/udfly.exe "$ARTIFACT"
           curl --fail --silent --show-error --location \
             --request POST \
             --header "Accept: application/vnd.github+json" \

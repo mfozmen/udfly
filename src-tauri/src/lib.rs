@@ -11,10 +11,10 @@ use tauri::{Emitter, Manager};
 // from CLI argv on launch (Windows / Linux file-association double-click)
 // and from RunEvent::Opened at runtime (macOS Apple-Event handoff). The
 // frontend drains it via take_pending_path on startup and again whenever
-// the udf-viewer://path-available event fires.
+// the udfly://path-available event fires.
 //
 // VecDeque (with pop_front) preserves selection order across a multi-file
-// "Open With → UDF Viewer" — Finder hands the URLs in the order the user
+// "Open With → Udfly" — Finder hands the URLs in the order the user
 // selected them, and a Vec/pop tail would reverse that.
 struct PendingPaths(Mutex<VecDeque<String>>);
 
@@ -44,7 +44,7 @@ fn write_file_text(path: String, contents: String) -> Result<(), String> {
 
 // Pop the next queued path the OS has handed us. Frontend calls this on
 // startup (so a Windows / Linux argv path is consumed) and on each
-// udf-viewer://path-available event (so macOS Apple-Event paths that
+// udfly://path-available event (so macOS Apple-Event paths that
 // arrive after the frontend mounted are picked up too).
 #[tauri::command]
 fn take_pending_path(state: tauri::State<PendingPaths>) -> Option<String> {
@@ -86,7 +86,7 @@ pub fn run() {
             drop(queue);
             // Tell the frontend a path is waiting; the listener over there
             // drains the queue via take_pending_path.
-            let _ = app_handle.emit("udf-viewer://path-available", ());
+            let _ = app_handle.emit("udfly://path-available", ());
         }
 
         // event is unused on non-macOS targets after the cfg-gated arm above.
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn write_file_text_writes_utf8_bytes_verbatim() {
         let path = std::env::temp_dir()
-            .join(format!("udf-viewer-write-test-{}.txt", std::process::id()));
+            .join(format!("udfly-write-test-{}.txt", std::process::id()));
         let body = "héllo\nwörld";
         write_file_text(path.to_string_lossy().into_owned(), body.to_string())
             .expect("write should succeed for a writable temp path");
@@ -120,7 +120,7 @@ mod tests {
     fn write_file_text_reports_io_errors_as_strings() {
         // A path whose parent directory doesn't exist can't be created.
         let bad = std::env::temp_dir()
-            .join("udf-viewer-no-such-dir")
+            .join("udfly-no-such-dir")
             .join("nested")
             .join("out.txt");
         let err = write_file_text(bad.to_string_lossy().into_owned(), "x".to_string())
