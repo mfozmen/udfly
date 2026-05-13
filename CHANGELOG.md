@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-13
+
+Bringing the rendered output closer to the official UYAP/e-devlet viewer, after a side-by-side comparison turned up three layout bugs on a real `bilirkişi görevlendirme` document.
+
+### Fixed
+
+- **Tabbed columns no longer mash together.** `<tab>` elements were being dropped by the parser, so columns like `Perihan AK YURDAKUL` and `İBRAHİM KURŞUN` rendered with no space between them. The renderer now honours each paragraph's `TabSet` and lays the tab as the right horizontal gap (a sized inline-block sized to the point offset the document specifies), matching the official viewer's column alignment.
+- **Page-scoped headers no longer paint on pages they don't apply to.** A header with `startPage="2"` on a one-page document was being drawn inline at the top of the body as a mashed "…MAHKEMESİESAS NO" line. The renderer now skips any header/footer whose `startPage` is past the document's page count.
+- **`border="borderNone"` tables render seamless.** UYAP uses tables only for column layout (signature blocks, two-column forms) and marks them borderless; the renderer was always drawing 1px cell borders. Borderless tables now render with no cell borders.
+
 ## [1.1.0] - 2026-05-12
 
 Adds the ways to open a `.udf` that 1.0.0 left out — a file picker and OS double-click — plus TXT/HTML export, and fixes line-spacing rendering.
@@ -36,6 +46,7 @@ Initial public release. UDF Viewer is a cross-platform Tauri 2 desktop app for o
 - **File association** for `.udf` registered via `tauri.conf.json` (so OS-level "Open with" lists UDF Viewer once installed).
 - **Cross-platform release CI**: `.github/workflows/release.yml` builds NSIS / DMG / AppImage / DEB / portable artifacts on tag push and uploads them to a draft GitHub Release.
 
-[unreleased]: https://github.com/mfozmen/udf-viewer/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/mfozmen/udf-viewer/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/mfozmen/udf-viewer/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/mfozmen/udf-viewer/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mfozmen/udf-viewer/releases/tag/v1.0.0
