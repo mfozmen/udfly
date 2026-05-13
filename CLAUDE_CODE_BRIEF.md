@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-Build a **cross-platform desktop UDF viewer** for Turkey's UYAP (judicial information system) `.udf` document format.
+Build a **fast, portable viewer** for Turkey's UYAP (judicial information system) `.udf` documents.
 
 - **Target users**: Turkish lawyers and citizens who receive `.udf` files and need to view them without installing UYAP's broken Java-based editor.
 - **Distribution**: GitHub releases with portable binaries for Windows, macOS, and Linux. Users should be able to download and run — no installer required (or at least an installer-free option).
