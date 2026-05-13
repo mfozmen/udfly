@@ -1,7 +1,8 @@
 export function renderToHTML(parsed) {
+  const pages = typeof parsed.pages === "number" ? parsed.pages : Infinity;
   const parts = [];
   for (const element of parsed.elements) {
-    const html = renderElement(element);
+    const html = renderElement(element, pages);
     if (html) parts.push(html);
   }
   return parts.join("");
@@ -19,7 +20,8 @@ const EXPORT_CSS = `body { margin: 0; background: #fff; }
 .page .udf-header, .page .udf-footer { font-size: 10pt; color: #6e6e73; margin-bottom: 16px; }
 .page .udf-footer { margin-top: 32px; margin-bottom: 0; }
 .page .udf-table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
-.page .udf-table td { border: 1px solid #e0e0e0; padding: 4pt 8pt; vertical-align: top; }`;
+.page .udf-table td { border: 1px solid #e0e0e0; padding: 4pt 8pt; vertical-align: top; }
+.page .udf-table[data-border="none"] td { border: none; padding: 0; }`;
 
 // Wrap renderToHTML output in a self-contained HTML5 document for export.
 // No external resources, no scripts — opening the file offline or forwarding
@@ -39,16 +41,24 @@ export function renderToStandaloneHTML(parsed) {
 </html>`;
 }
 
-function renderElement(element) {
+function renderElement(element, pages) {
   switch (element.type) {
     case "paragraph":
       return renderParagraph(element);
     case "table":
       return renderTable(element);
     case "header":
-      return renderWrapper("udf-header", element.paragraphs);
-    case "footer":
-      return renderWrapper("udf-footer", element.paragraphs);
+    case "footer": {
+      // A header/footer whose startPage is past the document's page count is
+      // furniture for pages we don't have, so it never appears. (We render an
+      // unpaginated flow, so an in-range one lands at the top/bottom of the
+      // body — the best we can do without real pagination.)
+      if (typeof element.startPage === "number" && element.startPage > pages) {
+        return "";
+      }
+      const className = element.type === "header" ? "udf-header" : "udf-footer";
+      return renderWrapper(className, element.paragraphs);
+    }
     default:
       return "";
   }
@@ -71,7 +81,10 @@ function renderTable(table) {
       return `<tr>${cellsHtml}</tr>`;
     })
     .join("");
-  return `<table class="udf-table">${rows}</table>`;
+  // borderNone tables are column scaffolding (signature blocks, forms), not
+  // data grids; the data attribute lets the stylesheet drop the cell borders.
+  const borderAttr = table.border === "borderNone" ? ' data-border="none"' : "";
+  return `<table class="udf-table"${borderAttr}>${rows}</table>`;
 }
 
 function renderParagraph(p) {
@@ -80,8 +93,61 @@ function renderParagraph(p) {
   if (isEmpty(p)) {
     return `<p${attr}>&nbsp;</p>`;
   }
-  const inner = p.runs.map(renderRun).join("");
-  return `<p${attr}>${inner}</p>`;
+  return `<p${attr}>${renderRunsWithTabs(p.runs, p.style.tabSet)}</p>`;
+}
+
+// UYAP's <tab> isn't "advance to the next browser tab stop" — a paragraph's
+// TabSet defines absolute point offsets from the line's left edge, and the
+// document's columns (signature blocks, the Not: block, date rows) only line
+// up if a tab lands exactly on its stop. white-space: pre-wrap can't express
+// that, so when a TabSet is present we materialize each tab as the right
+// amount of horizontal space: the run sequence is split at every "\t" and
+// each non-final segment becomes an inline-block whose min-width is the gap
+// from the previous stop (or the line start) to this one — so the text after
+// the tab begins at the stop's x position. Tabs past the last stop add no
+// width; a paragraph with no TabSet (or no tab) renders exactly as before.
+function renderRunsWithTabs(runs, tabSet) {
+  const stops = parseTabSet(tabSet);
+  if (stops.length === 0) {
+    return runs.map(renderRun).join("");
+  }
+  const segments = [[]];
+  for (const run of runs) {
+    const pieces = (run.text || "").split("\t");
+    for (let i = 0; i < pieces.length; i++) {
+      if (i > 0) segments.push([]);
+      if (pieces[i].length > 0) {
+        segments[segments.length - 1].push({ text: pieces[i], style: run.style });
+      }
+    }
+  }
+  if (segments.length === 1) {
+    return segments[0].map(renderRun).join("");
+  }
+  let html = "";
+  for (let i = 0; i < segments.length; i++) {
+    const fragHtml = segments[i].map(renderRun).join("");
+    if (i === segments.length - 1) {
+      html += fragHtml;
+      continue;
+    }
+    const stop = stops[Math.min(i, stops.length - 1)];
+    const prev = i === 0 ? 0 : stops[Math.min(i - 1, stops.length - 1)];
+    const width = Math.max(0, stop - prev);
+    html += `<span style="display: inline-block; min-width: ${width}pt">${fragHtml}</span>`;
+  }
+  return html;
+}
+
+function parseTabSet(tabSet) {
+  if (!tabSet || typeof tabSet !== "string") return [];
+  // Entries are "position:alignment:leader" (e.g. "297.0:0:0"); only the
+  // position (points) is used here — left alignment is assumed.
+  return tabSet
+    .split(",")
+    .map((entry) => parseFloat(entry))
+    .filter((n) => Number.isFinite(n) && n > 0)
+    .sort((a, b) => a - b);
 }
 
 function isEmpty(p) {

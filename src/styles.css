@@ -266,6 +266,13 @@ body {
   vertical-align: top;
 }
 
+/* borderNone tables are column-layout scaffolding (signature blocks, forms),
+   not data grids — render their cells seamless like the UYAP viewer does. */
+.page :where(.udf-table[data-border="none"] td) {
+  border: none;
+  padding: 0;
+}
+
 /* drag-over overlay */
 .dropoverlay {
   position: absolute;

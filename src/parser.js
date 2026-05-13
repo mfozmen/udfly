@@ -67,9 +67,17 @@ function parseElementNode(node, cdata, styleMap) {
     case "table":
       return parseTable(node, cdata, styleMap);
     case "header":
-      return { type: "header", paragraphs: collectParagraphs(node, cdata, styleMap) };
+      return {
+        type: "header",
+        startPage: parseIntAttr(node, "startPage", 1),
+        paragraphs: collectParagraphs(node, cdata, styleMap),
+      };
     case "footer":
-      return { type: "footer", paragraphs: collectParagraphs(node, cdata, styleMap) };
+      return {
+        type: "footer",
+        startPage: parseIntAttr(node, "startPage", 1),
+        paragraphs: collectParagraphs(node, cdata, styleMap),
+      };
     default:
       return null;
   }
@@ -102,7 +110,13 @@ function parseTable(node, cdata, styleMap) {
     }
     rows.push(cells);
   }
-  return { type: "table", rows };
+  const table = { type: "table", rows };
+  // UYAP marks layout tables (signature blocks, two-column forms)
+  // "borderNone"; the renderer keys off this to suppress cell borders. Keep
+  // the raw value so a future "borderAll"/etc. stays distinguishable.
+  const border = node.getAttribute("border");
+  if (border) table.border = border;
+  return table;
 }
 
 function parseParagraph(node, cdata, styleMap) {
@@ -111,7 +125,9 @@ function parseParagraph(node, cdata, styleMap) {
   const runs = [];
   for (const child of node.children) {
     const tag = child.tagName;
-    if (tag === "content" || tag === "space" || tag === "field") {
+    // <tab> carries the tab character at its offset; dropping it (as an
+    // earlier version did) silently glued the surrounding columns together.
+    if (tag === "content" || tag === "space" || tag === "field" || tag === "tab") {
       runs.push(parseRun(child, tag, cdata, styleMap, resolved));
     }
   }
