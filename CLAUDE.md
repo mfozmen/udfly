@@ -4,7 +4,7 @@ Project-specific instructions for Claude Code working on this repository. Read t
 
 ## Project
 
-**udf-viewer** — A cross-platform desktop viewer for Turkey's UYAP `.udf` document format. Built with Tauri 2 + vanilla HTML/CSS/JS. Read-only. MIT licensed.
+**udfly** — A fast, portable viewer for UYAP `.udf` documents. Built with Tauri 2 + vanilla HTML/CSS/JS. Read-only. MIT licensed.
 
 The full multi-stage technical brief is in `CLAUDE_CODE_BRIEF.md`. Always consult it before starting any task.
 

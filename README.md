@@ -1,14 +1,14 @@
-# UDF Viewer
+# Udfly
 
-A cross-platform desktop viewer for Turkey's UYAP `.udf` document format. Drop a `.udf` file on the window, see the document, print it. No Java required.
+A fast, portable viewer for UYAP `.udf` documents. Drop a `.udf` file on the window, see the document, print it. No Java required.
 
-![UDF Viewer rendering a sanitized mediation application](docs/screenshots/ui-loaded-application.png)
+![Udfly rendering a sanitized mediation application](docs/screenshots/ui-loaded-application.png)
 
 ## Why this exists
 
 UYAP (Ulusal Yargı Ağı Bilişim Sistemi — the Turkish judicial information system) issues many of its documents as `.udf` files: a ZIP container holding XML markup with an offset-based styling layer pointing into a CDATA text block. The reference editor UYAP ships is a Java desktop app that's awkward to install on modern machines, refuses to open on some systems, and is editing-oriented rather than viewing-oriented.
 
-UDF Viewer is read-only, lightweight, single-binary, and exists to let lawyers and citizens just *open* a `.udf` they received without fighting an installer.
+Udfly is read-only, lightweight, single-binary, and exists to let lawyers and citizens just *open* a `.udf` they received without fighting an installer.
 
 ## Who this is for
 
@@ -18,27 +18,27 @@ UDF Viewer is read-only, lightweight, single-binary, and exists to let lawyers a
 
 ## Installation
 
-Pre-built binaries for Windows, macOS, and Linux are attached to each [GitHub Release](https://github.com/mfozmen/udf-viewer/releases). Download the artifact for your platform and run it.
+Pre-built binaries for Windows, macOS, and Linux are attached to each [GitHub Release](https://github.com/mfozmen/udfly/releases). Download the artifact for your platform and run it.
 
 | Platform | Artifact |
 |----------|----------|
-| Windows  | `UDF-Viewer_x.y.z_x64-setup.exe` (NSIS installer) or `UDF-Viewer_x.y.z_x64-portable.exe` (single self-contained executable) |
-| macOS    | `UDF-Viewer_x.y.z_universal.dmg` (Apple Silicon + Intel) |
-| Linux    | `UDF-Viewer_x.y.z_amd64.deb` (Debian / Ubuntu) or `udf-viewer_x.y.z_amd64.AppImage` |
+| Windows  | `Udfly_x.y.z_x64-setup.exe` (NSIS installer) or `Udfly_x.y.z_x64-portable.exe` (single self-contained executable) |
+| macOS    | `Udfly_x.y.z_universal.dmg` (Apple Silicon + Intel) |
+| Linux    | `Udfly_x.y.z_amd64.deb` (Debian / Ubuntu) or `udfly_x.y.z_amd64.AppImage` |
 
 The portable Windows variant is the raw Tauri binary — no installer, no registry entries, no admin rights. It depends on Microsoft Edge WebView2, which ships preinstalled on Windows 11 and on every recent Windows 10 update; if WebView2 is missing on an older system, install the [Evergreen Standalone Installer](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) once and the portable `.exe` runs.
 
 ### First-run security warnings
 
-These releases are **not code-signed**. The first time you launch UDF Viewer, your OS will warn you:
+These releases are **not code-signed**. The first time you launch Udfly, your OS will warn you:
 
 - **Windows SmartScreen**: "Windows protected your PC." Click "More info" → "Run anyway."
-- **macOS Gatekeeper**: "UDF Viewer can't be opened because Apple cannot check it for malicious software." Two paths, depending on your macOS version:
-  - **macOS 15 Sequoia and later**: open System Settings → **Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the UDF Viewer entry. The right-click → Open shortcut was removed in Sequoia for unsigned downloads.
+- **macOS Gatekeeper**: "Udfly can't be opened because Apple cannot check it for malicious software." Two paths, depending on your macOS version:
+  - **macOS 15 Sequoia and later**: open System Settings → **Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the Udfly entry. The right-click → Open shortcut was removed in Sequoia for unsigned downloads.
   - **macOS 14 Sonoma and earlier**: the right-click → Open shortcut still works — right-click (or Control-click) the app in Finder, choose "Open," then confirm.
 
   macOS remembers the override on either path; you only do this once per install.
-- **Linux**: no signing prompt; the AppImage may need `chmod +x udf-viewer_*.AppImage` before running.
+- **Linux**: no signing prompt; the AppImage may need `chmod +x udfly_*.AppImage` before running.
 
 If you want to verify the binary instead of trusting the warning, build from source — the steps are below.
 
@@ -64,8 +64,8 @@ The status bar shows the document's page count, file size, and the UYAP verifica
 ### Commands
 
 ```bash
-git clone https://github.com/mfozmen/udf-viewer.git
-cd udf-viewer
+git clone https://github.com/mfozmen/udfly.git
+cd udfly
 npm install
 
 # Run in development with hot-reload:
@@ -97,7 +97,7 @@ The format **has no public specification**. This implementation was reverse-engi
 
 ## Disclaimer
 
-UDF Viewer is **not affiliated with UYAP, Türkiye Cumhuriyeti Adalet Bakanlığı (Ministry of Justice), or any official body**. It's an independent open-source project that reads a publicly-distributed file format. Use at your own discretion; nothing this viewer renders should be treated as a substitute for the original UYAP-issued document where legal authority matters.
+Udfly is **not affiliated with UYAP, Türkiye Cumhuriyeti Adalet Bakanlığı (Ministry of Justice), or any official body**. It's an independent open-source project that reads a publicly-distributed file format. Use at your own discretion; nothing this viewer renders should be treated as a substitute for the original UYAP-issued document where legal authority matters.
 
 ## Contributing
 
