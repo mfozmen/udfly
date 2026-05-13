@@ -60,13 +60,13 @@ function setFilename(name) {
 }
 
 function setStatus({ pages, sizeBytes, verificationCode }) {
-  els.pagesInfo.textContent =
-    typeof pages === "number" ? `${pages} page${pages === 1 ? "" : "s"}` : "—";
+  // Values are atomic (just the number/string). The statusbar markup
+  // pairs each value with its own label ("Pages", "Size", "Verification"),
+  // so embedding the unit or label prefix here would render twice.
+  els.pagesInfo.textContent = typeof pages === "number" ? String(pages) : "—";
   els.sizeInfo.textContent =
     typeof sizeBytes === "number" ? formatBytes(sizeBytes) : "—";
-  els.verificationInfo.textContent = verificationCode
-    ? `Verification: ${verificationCode}`
-    : "—";
+  els.verificationInfo.textContent = verificationCode || "—";
 }
 
 // Safety here comes from renderToHTML, not from the DOM API used to insert
