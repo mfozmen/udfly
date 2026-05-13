@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" alt="udfly" width="140">
+</p>
+
 # Udfly
 
 A fast, portable viewer for UYAP `.udf` documents. Drop a `.udf` file on the window, see the document, print it. No Java required.
