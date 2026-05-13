@@ -69,7 +69,7 @@ export function createFileLoader({ loadBytes, showError }) {
   // double-clicked .udf is queued from argv before the frontend mounts, so
   // the startup drain picks it up. On macOS the path arrives via
   // RunEvent::Opened — before or after mount — so we drain on startup and on
-  // each udf-viewer://path-available event. Looping until take_pending_path
+  // each udfly://path-available event. Looping until take_pending_path
   // returns null handles the multi-file Apple Event: "Open With" against
   // several files queues every path but emits the event only once.
   async function drainPendingPath() {
@@ -108,7 +108,7 @@ export function createFileLoader({ loadBytes, showError }) {
   // that's fine, drag-drop still works.
   (async () => {
     try {
-      await listen("udf-viewer://path-available", () => {
+      await listen("udfly://path-available", () => {
         drainPendingPath();
       });
     } catch {

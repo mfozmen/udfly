@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    udf_viewer_lib::run()
+    udfly_lib::run()
 }
