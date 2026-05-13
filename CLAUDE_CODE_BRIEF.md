@@ -388,7 +388,7 @@ Set up release distribution.
 1. tauri.conf.json:
    - Configure bundle targets: nsis (Windows), dmg (macOS), appimage + deb (Linux)
    - For Windows, also configure a portable .exe (single executable, no installer). Tauri 2 supports this via bundle.windows.nsis.installerMode or similar — check current docs.
-   - Icons: generate from a simple square logo (just the letters "UDF" on a colored background — use the `tauri icon` command to generate all sizes). Place source in src-tauri/icons/.
+   - Icons: source PNGs live in assets/ (assets/icon.png light, assets/mark.png dark). Run `npx @tauri-apps/cli icon assets/icon.png` to regenerate every bundled size into src-tauri/icons/.
    - File association for .udf is already set in Stage 0; verify it's correct.
 
 2. .github/workflows/release.yml:
