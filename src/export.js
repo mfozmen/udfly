@@ -1,5 +1,39 @@
 import { renderToStandaloneHTML } from "./render.js";
 
+// Detect whether we're running inside the Tauri shell. Tauri injects
+// __TAURI_INTERNALS__ on window before the frontend mounts; its absence
+// means the page is being served by plain Vite (npm run dev) or another
+// non-Tauri host. Checked per-export so a late injection scenario still
+// picks up the bridge.
+function defaultIsTauriAvailable() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.__TAURI_INTERNALS__ !== "undefined"
+  );
+}
+
+// Plain-browser save: build a Blob, point an off-screen <a download> at it,
+// click it, then revoke. The browser's own download UI (file picker or
+// silent save) takes over from there.
+//
+// revokeObjectURL is deferred to the next tick. All current browsers
+// capture the URL contents synchronously during click(), so revoking
+// inline works in practice — but the spec wording allows the URL to need
+// to remain valid until the download begins, and queueing the revoke is
+// the standard defensive idiom.
+function defaultBrowserSave({ contents, mimeType, filename }) {
+  const blob = new Blob([contents], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 // Suggest "foo.txt" / "foo.html" from "foo.udf" rather than the more awkward
 // "foo.udf.txt" the OS save dialog would otherwise default to. Falls back to
 // "document.<ext>" when there's no source filename (shouldn't happen via the
@@ -22,10 +56,21 @@ export function withPlatformLineEndings(text, userAgent) {
 }
 
 // Wire the Export dropdown: toggle on the trigger, close on Escape /
-// outside-click / item selection, and on each item run the save dialog and
-// write the result through the Tauri command. saveDialog and invoke are
-// injected so this module never imports the Tauri bindings directly — keeps
-// it loadable (and defaultExportName testable) in plain Node.
+// outside-click / item selection, and on each item save the result.
+//
+// Two save paths are wired:
+//   - Tauri shell (production): OS save dialog + Rust write_file_text invoke.
+//     saveDialog and invoke are injected so this module never imports the
+//     Tauri bindings directly — keeps it loadable (and defaultExportName
+//     testable) in plain Node.
+//   - Plain browser (npm run dev, no __TAURI_INTERNALS__): Blob-backed
+//     anchor download. Lets the export menu work end-to-end during frontend
+//     iteration without spinning up the Rust shell. onBrowserSave is the
+//     seam that delivers the bytes; defaults to a real <a download> click,
+//     overridable so tests can record the payload.
+//
+// isTauriAvailable is called per-export, not at setup, because the Tauri
+// runtime injection happens after page mount in some scenarios.
 //
 // getDocument() returns the currently-loaded { parsed, filename } or a
 // falsy value when nothing is loaded; reading it lazily at export time —
@@ -34,7 +79,14 @@ export function withPlatformLineEndings(text, userAgent) {
 //
 // Returns { close } so callers (e.g. the error-state reset in main.js) can
 // dismiss the menu programmatically.
-export function setupExportMenu({ els, getDocument, saveDialog, invoke }) {
+export function setupExportMenu({
+  els,
+  getDocument,
+  saveDialog,
+  invoke,
+  isTauriAvailable = defaultIsTauriAvailable,
+  onBrowserSave = defaultBrowserSave,
+}) {
   function open() {
     els.exportMenu.hidden = false;
     els.exportBtn.setAttribute("aria-expanded", "true");
@@ -77,19 +129,33 @@ export function setupExportMenu({ els, getDocument, saveDialog, invoke }) {
     if (!doc || !doc.parsed) return;
     let filters;
     let contents;
+    let mimeType;
     if (format === "txt") {
       filters = [{ name: "Plain Text", extensions: ["txt"] }];
+      mimeType = "text/plain;charset=utf-8";
       const ua =
         (typeof navigator !== "undefined" && navigator.userAgent) || "";
       contents = withPlatformLineEndings(doc.parsed.text, ua);
     } else {
       filters = [{ name: "HTML Document", extensions: ["html"] }];
+      mimeType = "text/html;charset=utf-8";
       contents = renderToStandaloneHTML(doc.parsed);
     }
+    const filename = defaultExportName(doc.filename, format);
+
+    if (!isTauriAvailable()) {
+      // Plain-browser fallback: hand the payload to onBrowserSave (default
+      // implementation is an <a download> click). No native save dialog is
+      // possible without the Tauri bridge; the browser's own download
+      // location prompt (if enabled) is what the user sees.
+      onBrowserSave({ contents, mimeType, filename });
+      return;
+    }
+
     let path;
     try {
       path = await saveDialog({
-        defaultPath: defaultExportName(doc.filename, format),
+        defaultPath: filename,
         filters,
       });
     } catch (cause) {

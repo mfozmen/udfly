@@ -3,6 +3,60 @@ import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { basename } from "./path.js";
 
+// Detect whether we're running inside the Tauri shell. Tauri injects
+// __TAURI_INTERNALS__ on window before the frontend mounts; its absence
+// means the page is served by plain Vite (npm run dev) or another non-Tauri
+// host, in which case openDialog / read_file_bytes / take_pending_path all
+// throw, and the browser-native picker is the only working path.
+function defaultIsTauriAvailable() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.__TAURI_INTERNALS__ !== "undefined"
+  );
+}
+
+// Plain-browser file picker: spawn a hidden <input type="file" accept=".udf">,
+// click it, and resolve with the chosen File (or null if the user cancels).
+// Used when the Tauri bridge isn't available — drag-drop already works
+// without Tauri, so this just gives the Open button the same parity.
+//
+// 'change' fires on selection; 'cancel' is the modern (2023+) signal that
+// the user dismissed the OS picker. Pre-2023 browsers never fire 'cancel',
+// so we also backstop with a window 'focus' listener: when the window
+// regains focus after the picker closes and no file was selected, treat it
+// as a cancel. Without this, ancient browsers (or any browser hitting a
+// bug) would leave the Promise un-settled, the hidden <input> in the DOM,
+// and the loadInFlight guard stuck 'true' forever.
+export function defaultPickFileViaBrowser() {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".udf";
+    input.style.display = "none";
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      input.remove();
+      window.removeEventListener("focus", onFocus);
+      resolve(value);
+    };
+    // The 'focus' fires the instant the window regains focus, but 'change'
+    // can arrive a tick later — give it a small grace window before
+    // declaring cancel.
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!settled && !input.files?.length) done(null);
+      }, 300);
+    };
+    input.addEventListener("change", () => done(input.files?.[0] || null));
+    input.addEventListener("cancel", () => done(null));
+    window.addEventListener("focus", onFocus);
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
 // Owns loading a .udf from a host filesystem path: the interactive Open
 // dialog (Open button / Ctrl+O) and the OS file-association handoff (argv on
 // Windows/Linux, the macOS RunEvent::Opened Apple Event). Both end in
@@ -15,7 +69,12 @@ import { basename } from "./path.js";
 // createFileLoader also starts the handoff drain (and the listener for later
 // arrivals) as a documented side effect; it returns { pickAndOpen } for the
 // UI to wire to the Open button and Ctrl+O.
-export function createFileLoader({ loadBytes, showError }) {
+export function createFileLoader({
+  loadBytes,
+  showError,
+  isTauriAvailable = defaultIsTauriAvailable,
+  pickFileViaBrowser = defaultPickFileViaBrowser,
+}) {
   // loadInFlight serializes every path that ends in loadBytes — the picker
   // and the handoff drain. drainPending records "a drain was wanted while
   // loadInFlight was held"; the in-flight finally block re-triggers the
@@ -40,22 +99,52 @@ export function createFileLoader({ loadBytes, showError }) {
     await loadBytes(filename, buffer.byteLength, buffer);
   }
 
+  async function pickAndOpenViaTauri() {
+    let path;
+    try {
+      path = await openDialog({
+        multiple: false,
+        filters: [{ name: "UDF Document", extensions: ["udf"] }],
+      });
+    } catch (cause) {
+      showError(cause.message || String(cause));
+      return;
+    }
+    if (!path) return; // user canceled the OS picker
+    await loadFromPath(path);
+  }
+
+  async function pickAndOpenViaBrowser() {
+    let file;
+    try {
+      file = await pickFileViaBrowser();
+    } catch (cause) {
+      showError(cause.message || String(cause));
+      return;
+    }
+    if (!file) return; // user canceled the picker
+    let buffer;
+    try {
+      buffer = await file.arrayBuffer();
+    } catch (cause) {
+      showError(`Failed to read ${file.name}: ${cause.message || cause}`);
+      return;
+    }
+    // Use buffer.byteLength rather than file.size so every loadBytes call
+    // site reports the size of the bytes actually loaded, regardless of
+    // whether the source was a File (drop, picker) or raw bytes (Tauri).
+    await loadBytes(file.name, buffer.byteLength, buffer);
+  }
+
   async function pickAndOpen() {
     if (loadInFlight) return;
     loadInFlight = true;
     try {
-      let path;
-      try {
-        path = await openDialog({
-          multiple: false,
-          filters: [{ name: "UDF Document", extensions: ["udf"] }],
-        });
-      } catch (cause) {
-        showError(cause.message || String(cause));
-        return;
+      if (isTauriAvailable()) {
+        await pickAndOpenViaTauri();
+      } else {
+        await pickAndOpenViaBrowser();
       }
-      if (!path) return; // user canceled the OS picker
-      await loadFromPath(path);
     } finally {
       loadInFlight = false;
       if (drainPending) {
@@ -73,6 +162,7 @@ export function createFileLoader({ loadBytes, showError }) {
   // returns null handles the multi-file Apple Event: "Open With" against
   // several files queues every path but emits the event only once.
   async function drainPendingPath() {
+    if (!isTauriAvailable()) return; // browser mode: no backend queue to drain
     if (loadInFlight) {
       // A load is mid-flight; record the want-to-drain so the in-flight
       // finally block re-triggers us once the guard frees.
@@ -103,19 +193,21 @@ export function createFileLoader({ loadBytes, showError }) {
 
   // Subscribe to path-available BEFORE the first drain: drainPendingPath
   // awaits an invoke() round-trip, and a macOS RunEvent::Opened firing in
-  // that window would emit with no handler and be lost. listen() rejects
-  // when there's no Tauri event bridge (standalone Vite during dev/tests) —
-  // that's fine, drag-drop still works.
-  (async () => {
-    try {
-      await listen("udfly://path-available", () => {
-        drainPendingPath();
-      });
-    } catch {
-      /* no Tauri event bridge — standalone Vite */
-    }
-    drainPendingPath();
-  })();
+  // that window would emit with no handler and be lost. Skipping entirely
+  // in browser mode keeps standalone Vite quiet (no caught-and-discarded
+  // listen() rejection on every page load).
+  if (isTauriAvailable()) {
+    (async () => {
+      try {
+        await listen("udfly://path-available", () => {
+          drainPendingPath();
+        });
+      } catch {
+        /* no Tauri event bridge — standalone Vite */
+      }
+      drainPendingPath();
+    })();
+  }
 
   return { pickAndOpen };
 }
