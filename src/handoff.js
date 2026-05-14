@@ -130,7 +130,10 @@ export function createFileLoader({
       showError(`Failed to read ${file.name}: ${cause.message || cause}`);
       return;
     }
-    await loadBytes(file.name, file.size, buffer);
+    // Use buffer.byteLength rather than file.size so every loadBytes call
+    // site reports the size of the bytes actually loaded, regardless of
+    // whether the source was a File (drop, picker) or raw bytes (Tauri).
+    await loadBytes(file.name, buffer.byteLength, buffer);
   }
 
   async function pickAndOpen() {

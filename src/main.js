@@ -135,7 +135,10 @@ async function openFile(file) {
     showError(`Failed to read ${file.name}: ${cause.message}`);
     return;
   }
-  await loadBytes(file.name, file.size, buffer);
+  // buffer.byteLength matches what the Tauri loadFromPath path passes for
+  // sizeBytes; using it here too keeps every loadBytes call site reporting
+  // the size of the bytes actually loaded.
+  await loadBytes(file.name, buffer.byteLength, buffer);
 }
 
 // Path-driven loads (Open dialog + OS file-association handoff) live in their
