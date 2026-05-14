@@ -11,7 +11,9 @@ globalThis.window = dom.window;
 globalThis.File = dom.window.File;
 globalThis.Blob = dom.window.Blob;
 
-const { createFileLoader } = await import("../src/handoff.js");
+const { createFileLoader, defaultPickFileViaBrowser } = await import(
+  "../src/handoff.js"
+);
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -69,6 +71,21 @@ test("pickAndOpen surfaces a picker error through showError", async () => {
   await flush();
   assert.equal(showErrorCalls.length, 1);
   assert.match(showErrorCalls[0], /picker exploded/);
+});
+
+test("defaultPickFileViaBrowser resolves null when window regains focus without a file selection", async () => {
+  // Backstops the rare scenario where neither 'change' nor 'cancel' fires
+  // (older browsers, browser bugs): when the window regains focus after the
+  // OS picker closes and no file ended up in the input, treat it as cancel.
+  // Without this, the Promise would never settle, the hidden <input> would
+  // linger in the DOM, and any loadInFlight guard wrapping the picker would
+  // stay 'true' forever.
+  const promise = defaultPickFileViaBrowser();
+  // Simulate the OS picker closing: fire focus on window with no file picked.
+  await new Promise((r) => setTimeout(r, 10));
+  window.dispatchEvent(new dom.window.Event("focus"));
+  const result = await promise;
+  assert.equal(result, null);
 });
 
 test("pickAndOpen serializes concurrent calls in browser mode too", async () => {
