@@ -1,9 +1,11 @@
 /* ===== Fonts =====
    Self-hosted so the app works offline. Public Sans was designed for the
    U.S. federal government and reads as serious/civic — well-matched to
-   judicial document content. JetBrains Mono is used only for the UYAP
-   verification code; pairing a hash with a humanist sans feels wrong,
-   and the slab-mono treatment signals "this is a checksum, not prose".
+   judicial document content. JetBrains Mono is used for machine-readable
+   strings the user is meant to copy rather than read: the UYAP
+   verification code in the statusbar, and the raw error message in the
+   error state (which often contains paths, codes, or quoted UDF data).
+   Setting those in a humanist sans would misrepresent what they are.
 */
 @font-face {
   font-family: "Public Sans";
