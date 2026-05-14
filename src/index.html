@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f3f0e8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1916" media="(prefers-color-scheme: dark)" />
     <title>Udfly</title>
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="stylesheet" href="./styles.css" />
@@ -11,7 +13,17 @@
 
   <body>
     <header class="topbar">
-      <h1 class="topbar__title">Udfly</h1>
+      <div class="topbar__brand">
+        <img
+          class="topbar__mark"
+          src="./mark-only.png"
+          alt=""
+          aria-hidden="true"
+          width="22"
+          height="22"
+        />
+        <h1 class="topbar__title" translate="no">udfly</h1>
+      </div>
       <div class="topbar__filename" id="filename" aria-live="polite"></div>
       <div class="topbar__actions">
         <button
@@ -58,7 +70,7 @@
           </ul>
         </div>
         <button
-          class="btn"
+          class="btn btn--separator-before"
           id="print-btn"
           type="button"
           disabled
@@ -71,9 +83,30 @@
 
     <main class="content" id="content">
       <section class="state state--empty" id="empty-state" aria-label="No document">
-        <div class="state__card state__card--dropzone">
-          <p class="state__title">Drop a .udf file here</p>
-          <p class="state__hint">or click <strong>Open</strong> in the toolbar (Ctrl/Cmd+O)</p>
+        <div class="empty">
+          <img
+            class="empty__mark empty__mark--light"
+            src="./mark-light.png"
+            alt=""
+            aria-hidden="true"
+            width="88"
+            height="88"
+          />
+          <img
+            class="empty__mark empty__mark--dark"
+            src="./mark-dark.png"
+            alt=""
+            aria-hidden="true"
+            width="88"
+            height="88"
+          />
+          <h2 class="empty__title">Drop a .udf file to begin</h2>
+          <p class="empty__hint">
+            or press
+            <kbd class="kbd">Ctrl</kbd>
+            <kbd class="kbd">O</kbd>
+            to open
+          </p>
         </div>
       </section>
 
@@ -92,10 +125,11 @@
         aria-label="Error"
         hidden
       >
-        <div class="state__card state__card--error">
-          <h2 class="state__title">Couldn't open this file</h2>
-          <p class="state__message" id="error-message"></p>
-          <button class="btn" id="error-retry" type="button">
+        <div class="error">
+          <div class="error__rule" aria-hidden="true"></div>
+          <h2 class="error__title">Couldn’t open this file</h2>
+          <p class="error__message" id="error-message"></p>
+          <button class="btn error__retry" id="error-retry" type="button">
             Try another file
           </button>
         </div>
@@ -107,11 +141,20 @@
     </main>
 
     <footer class="statusbar" aria-label="Document properties">
-      <span class="statusbar__item" id="pages-info">—</span>
-      <span class="statusbar__sep" aria-hidden="true">•</span>
-      <span class="statusbar__item" id="size-info">—</span>
-      <span class="statusbar__sep" aria-hidden="true">•</span>
-      <span class="statusbar__item" id="verification-info">—</span>
+      <div class="statusbar__item">
+        <span class="statusbar__label">Pages</span>
+        <span class="statusbar__value" id="pages-info">—</span>
+      </div>
+      <span class="statusbar__sep" aria-hidden="true"></span>
+      <div class="statusbar__item">
+        <span class="statusbar__label">Size</span>
+        <span class="statusbar__value" id="size-info">—</span>
+      </div>
+      <span class="statusbar__sep" aria-hidden="true"></span>
+      <div class="statusbar__item">
+        <span class="statusbar__label">Verification</span>
+        <span class="statusbar__value statusbar__value--mono" id="verification-info">—</span>
+      </div>
     </footer>
   </body>
 </html>

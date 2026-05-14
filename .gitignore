@@ -26,6 +26,9 @@ Thumbs.db
 # Claude Code local config
 .claude/settings.local.json
 
+# Playwright MCP cache (transient screenshots / runtime artifacts)
+.playwright-mcp/
+
 # Scratch from tools that occasionally write to a Windows absolute path on
 # a POSIX-style git view, landing the path itself as a filename in the
 # working tree (e.g. "C:UsersfahriAppDataLocalTemp..."). The colon is

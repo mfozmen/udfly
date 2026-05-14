@@ -1,36 +1,96 @@
+/* ===== Fonts =====
+   Self-hosted so the app works offline. Public Sans was designed for the
+   U.S. federal government and reads as serious/civic — well-matched to
+   judicial document content. JetBrains Mono is used for machine-readable
+   strings the user is meant to copy rather than read: the UYAP
+   verification code in the statusbar, and the raw error message in the
+   error state (which often contains paths, codes, or quoted UDF data).
+   Setting those in a humanist sans would misrepresent what they are.
+*/
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/public-sans-variable.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("./fonts/jetbrains-mono-variable.woff2") format("woff2-variations");
+}
+
 :root {
-  --color-bg: #f5f5f5;
+  /* Warm paper-tint chrome. Never pure white — pure white competes with
+     the .page surface; a faint cream tint pushes the document forward. */
+  --color-bg: #faf8f3;
+  --color-chrome-bg: #f3f0e8;
   --color-surface: #ffffff;
-  --color-chrome-bg: #ffffff;
-  --color-chrome-fg: #1c1c1e;
-  --color-chrome-muted: #6e6e73;
-  --color-border: #e0e0e0;
-  --color-border-strong: #c0c0c0;
-  --color-page-shadow: rgba(0, 0, 0, 0.08);
-  --color-accent: #0a4d8a;
-  --color-error: #b13a3a;
-  --font-chrome: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+
+  /* Near-black with warmth; pure #000 reads "Material Design" not "paper". */
+  --color-chrome-fg: #1a1816;
+  --color-chrome-muted: #6a655d;
+  --color-chrome-subtle: #8d877d;
+
+  /* Hairline borders — tinted, not gray. */
+  --color-border: rgba(26, 24, 22, 0.08);
+  --color-border-strong: rgba(26, 24, 22, 0.16);
+
+  /* Turkish flag red. Single accent. Used in the brand mark, the drop
+     overlay (its loud moment), error accents, and focus rings. Nowhere
+     else — every additional surface dilutes recognition. */
+  --color-accent: #e30a17;
+  --color-accent-deep: #b3000c;
+  --color-accent-tint: rgba(227, 10, 23, 0.06);
+
+  /* Error — desaturated brick, distinct from brand red so users can tell
+     "warning" from "brand presence". */
+  --color-error: #b13a2f;
+  --color-error-tint: rgba(177, 58, 47, 0.06);
+
+  --color-page-shadow: rgba(0, 0, 0, 0.06);
+
+  --font-chrome: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
   --font-content: "Times New Roman", "Times", Georgia, serif;
-  --topbar-h: 44px;
-  --statusbar-h: 28px;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas,
+    monospace;
+
+  --topbar-h: 48px;
+  --statusbar-h: 32px;
   --page-max-w: 800px;
   --page-pad-x: 60px;
   --page-pad-y: 50px;
+
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-short: 160ms;
+  --duration-medium: 240ms;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #1e1e1e;
-    --color-surface: #f6f5ef;
-    --color-chrome-bg: #2a2a2a;
-    --color-chrome-fg: #f2f2f7;
-    --color-chrome-muted: #9e9ea2;
-    --color-border: #3a3a3c;
-    --color-border-strong: #4a4a4c;
+    --color-bg: #161412;
+    --color-chrome-bg: #1c1916;
+    --color-surface: #f6f4ee;
+
+    --color-chrome-fg: #ede9e0;
+    --color-chrome-muted: #8a847a;
+    --color-chrome-subtle: #635e56;
+
+    --color-border: rgba(237, 233, 224, 0.08);
+    --color-border-strong: rgba(237, 233, 224, 0.16);
+
+    /* Slightly hotter red on dark — pure #E30A17 vibrates on near-black. */
+    --color-accent: #ff2533;
+    --color-accent-deep: #e30a17;
+    --color-accent-tint: rgba(255, 37, 51, 0.08);
+
+    --color-error: #d96256;
+    --color-error-tint: rgba(217, 98, 86, 0.08);
+
     --color-page-shadow: rgba(0, 0, 0, 0.6);
-    --color-accent: #6ab1ff;
-    --color-error: #ff7a7a;
   }
 }
 
@@ -38,6 +98,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html {
+  /* Tell the UA we render both themes so scrollbars, form controls, and
+     <select> dropdowns adopt the right native styling. */
+  color-scheme: light dark;
 }
 
 html,
@@ -48,62 +114,167 @@ body {
 body {
   font-family: var(--font-chrome);
   font-size: 13px;
+  font-weight: 400;
+  font-feature-settings: "ss01", "cv11";
+  letter-spacing: -0.005em;
   color: var(--color-chrome-fg);
   background-color: var(--color-bg);
   display: grid;
   grid-template-rows: var(--topbar-h) 1fr var(--statusbar-h);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* topbar */
+/* ===== Topbar =====
+   Three-column grid: brand (icon + wordmark) | filename | actions.
+   The wordmark is lowercase 'udfly' — matches the repo brand and reads
+   warmer than 'Udfly'. The brand mark is the app icon at 22px; on light
+   bg we show the light variant, on dark the dark variant. */
 .topbar {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
   padding: 0 16px;
   background-color: var(--color-chrome-bg);
   border-bottom: 1px solid var(--color-border);
+  user-select: none;
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Transparent-background mark glyph (red U + paper plane). The same mark
+   reads on light and dark chrome because it's a saturated red on alpha. */
+.topbar__mark {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .topbar__title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 13.5px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  color: var(--color-chrome-fg);
+  font-feature-settings: "ss01", "ss02";
 }
 
 .topbar__filename {
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 450;
   color: var(--color-chrome-muted);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: center;
+  /* Grid items default to min-width: auto, which prevents text-overflow
+     from kicking in until layout overflows the parent. Forcing 0 lets the
+     ellipsis activate as soon as the filename exceeds its column. */
+  min-width: 0;
 }
 
 .topbar__actions {
   display: flex;
-  gap: 8px;
+  gap: 2px;
 }
 
+/* Subtle vertical separator before the Print action so it reads as a
+   primary action distinct from Open/Export. */
+.topbar__actions .btn--separator-before {
+  margin-left: 8px;
+  position: relative;
+}
+.topbar__actions .btn--separator-before::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 14px;
+  background-color: var(--color-border-strong);
+}
+
+/* ===== Buttons =====
+   Tertiary by default (background only on hover). Reads as a control
+   without competing with the document. Active and disabled states are
+   tuned for legibility, not just decoration. */
+.btn {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--color-chrome-fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 11px;
+  cursor: pointer;
+  /* Skip the 300ms tap-zoom delay on touch and suppress the platform
+     default tap highlight; the explicit :hover/:active styles below
+     carry the affordance. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-short) var(--easing-standard),
+    border-color var(--duration-short) var(--easing-standard),
+    color var(--duration-short) var(--easing-standard);
+}
+
+.btn:hover:not(:disabled) {
+  background-color: rgba(26, 24, 22, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  .btn:hover:not(:disabled) {
+    background-color: rgba(237, 233, 224, 0.06);
+  }
+}
+
+.btn:active:not(:disabled) {
+  background-color: rgba(26, 24, 22, 0.1);
+}
+@media (prefers-color-scheme: dark) {
+  .btn:active:not(:disabled) {
+    background-color: rgba(237, 233, 224, 0.1);
+  }
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.btn:disabled {
+  color: var(--color-chrome-subtle);
+  cursor: default;
+}
+
+/* Export dropdown */
 .topbar__export {
   position: relative;
 }
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   right: 0;
-  margin-top: 4px;
   background-color: var(--color-chrome-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  box-shadow: 0 4px 16px var(--color-page-shadow);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
   list-style: none;
-  padding: 4px 0;
-  min-width: 160px;
+  padding: 4px;
+  min-width: 168px;
   z-index: 10;
+}
+@media (prefers-color-scheme: dark) {
+  .dropdown-menu {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .dropdown-menu[hidden] {
@@ -113,18 +284,25 @@ body {
 .dropdown-menu__item {
   display: block;
   width: 100%;
-  padding: 6px 16px;
+  padding: 7px 12px;
   text-align: left;
   background: transparent;
   border: none;
+  border-radius: 5px;
   color: var(--color-chrome-fg);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 450;
   cursor: pointer;
 }
 
 .dropdown-menu__item:hover:not(:disabled) {
-  background-color: var(--color-bg);
+  background-color: rgba(26, 24, 22, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  .dropdown-menu__item:hover:not(:disabled) {
+    background-color: rgba(237, 233, 224, 0.06);
+  }
 }
 
 .dropdown-menu__item:focus-visible {
@@ -132,40 +310,12 @@ body {
   outline-offset: -2px;
 }
 
-/* buttons */
-.btn {
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--color-chrome-fg);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 4px 12px;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.btn:hover:not(:disabled) {
-  border-color: var(--color-border-strong);
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.btn:disabled {
-  color: var(--color-chrome-muted);
-  cursor: default;
-}
-
-/* content area */
+/* ===== Content area & state regions ===== */
 .content {
   position: relative;
   overflow: auto;
 }
 
-/* state regions */
 .state {
   min-height: 100%;
   display: flex;
@@ -178,45 +328,169 @@ body {
   display: none;
 }
 
-.state__card {
-  max-width: 480px;
+/* Subtle fade-in when a state becomes visible. Each transition (empty →
+   page, page → error, etc.) gets a 240ms ease that feels considered
+   without being decorative. Print is unaffected because @media print
+   suppresses all but .state--page anyway. */
+.state:not([hidden]) {
+  animation: state-appear var(--duration-medium) var(--easing-standard);
+}
+@keyframes state-appear {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .state:not([hidden]) {
+    animation: none;
+  }
+  .dropoverlay--active {
+    animation: none;
+  }
+}
+
+/* Empty state — the app icon at large size, a single line of guidance,
+   and a keyboard shortcut hint with a styled <kbd>. No card, no dashed
+   box; the entire content area is the drop target, so a card would lie
+   about where you can drop. */
+.state--empty {
+  flex-direction: column;
+  gap: 0;
+}
+
+.empty {
   text-align: center;
-  padding: 48px 32px;
+  max-width: 420px;
 }
 
-.state__card--dropzone {
-  border: 1px dashed var(--color-border-strong);
-  border-radius: 12px;
-  background-color: var(--color-chrome-bg);
+.empty__mark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 28px;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 28px rgba(0, 0, 0, 0.06);
+}
+.empty__mark--dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  .empty__mark--light {
+    display: none;
+  }
+  .empty__mark--dark {
+    display: block;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+  }
 }
 
-.state__card--error {
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background-color: var(--color-chrome-bg);
+.empty__title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-chrome-fg);
+  margin-bottom: 10px;
+  text-wrap: balance;
 }
 
-.state__title {
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.state__hint,
-.state__message {
+.empty__hint {
   font-size: 13px;
+  font-weight: 400;
   color: var(--color-chrome-muted);
-  margin-bottom: 16px;
+  letter-spacing: -0.005em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.state__message {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+/* Flat kbd — no faux 3D bottom border. The slight inset shadow and
+   chrome-bg fill carry the affordance without looking like a toy. */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-chrome);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-chrome-fg);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  padding: 1px 6px;
+  min-width: 18px;
+  height: 18px;
+  justify-content: center;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  .kbd {
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* ===== Error state =====
+   No card. A red hairline rule above the title gives the state its
+   identity without shouting; the message uses mono so error strings
+   (with paths, codes) line up cleanly. */
+.error {
+  text-align: center;
+  max-width: 480px;
+}
+
+.error__rule {
+  width: 28px;
+  height: 2px;
+  background-color: var(--color-accent);
+  margin: 0 auto 24px;
+  border-radius: 1px;
+}
+
+.error__title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-chrome-fg);
+  margin-bottom: 12px;
+  text-wrap: balance;
+}
+
+.error__message {
+  font-family: var(--font-mono);
   font-size: 12px;
+  font-weight: 400;
   color: var(--color-error);
+  margin-bottom: 28px;
   word-break: break-word;
+  line-height: 1.55;
 }
 
-/* page surface */
+.error__retry {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border: 1px solid var(--color-border-strong);
+  transition: border-color var(--duration-short) var(--easing-standard),
+    color var(--duration-short) var(--easing-standard);
+}
+
+.error__retry:hover:not(:disabled) {
+  border-color: var(--color-chrome-fg);
+  background-color: transparent;
+}
+
+/* ===== Page surface (.page) =====
+   PRESERVED — the document surface is intentionally untouched per the
+   redesign brief. The only edit here is updating the muted color
+   reference for headers/footers via the existing token. */
 .state--page {
   padding: 32px 16px;
   align-items: flex-start;
@@ -233,8 +507,6 @@ body {
   box-shadow: 0 2px 12px var(--color-page-shadow);
   font-family: var(--font-content);
   color: #000;
-  /* default font size scales with the document; per-paragraph styles
-     override via the renderer's inline pt sizes */
   font-size: 12pt;
   line-height: 1.4;
 }
@@ -266,61 +538,125 @@ body {
   vertical-align: top;
 }
 
-/* borderNone tables are column-layout scaffolding (signature blocks, forms),
-   not data grids — render their cells seamless like the UYAP viewer does. */
 .page :where(.udf-table[data-border="none"] td) {
   border: none;
   padding: 0;
 }
 
-/* drag-over overlay */
+/* ===== Drop overlay =====
+   This is the loud moment. Red tint over the whole content area, red
+   hairline border, and a confident pill stating the action. Subtle
+   fade-in animation when the user begins dragging. */
 .dropoverlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(10, 77, 138, 0.08);
-  border: 2px dashed var(--color-accent);
-  border-radius: 4px;
+  background-color: var(--color-accent-tint);
   display: none;
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  z-index: 5;
+}
+
+.dropoverlay::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1.5px dashed var(--color-accent);
+  border-radius: 8px;
+  opacity: 0.6;
 }
 
 .dropoverlay--active {
   display: flex;
+  animation: drop-fade-in var(--duration-medium) var(--easing-standard);
+}
+
+/* When dragging, the drop pill is the single focal point. Empty- and
+   error-state content would clutter the moment — fade them. The page
+   stays visible so users see what they're about to replace. */
+.content:has(.dropoverlay--active) .empty,
+.content:has(.dropoverlay--active) .error {
+  opacity: 0;
+  transition: opacity var(--duration-short) var(--easing-standard);
+}
+
+@keyframes drop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .dropoverlay__inner {
   font-size: 14px;
-  font-weight: 500;
-  color: var(--color-accent);
-  background-color: var(--color-chrome-bg);
-  padding: 12px 24px;
-  border-radius: 8px;
-  border: 1px solid var(--color-accent);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  background-color: var(--color-accent);
+  padding: 10px 20px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(227, 10, 23, 0.3),
+    0 1px 2px rgba(227, 10, 23, 0.2);
 }
 
-/* status bar */
+/* ===== Status bar =====
+   Key/value pairs with uppercase labels. The verification code uses
+   JetBrains Mono — it's a hash, not prose; rendering it in a humanist
+   sans implies it's text you read, when it's actually text you copy. */
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 20px;
   padding: 0 16px;
   background-color: var(--color-chrome-bg);
   border-top: 1px solid var(--color-border);
-  color: var(--color-chrome-muted);
+  color: var(--color-chrome-fg);
   font-size: 12px;
+  user-select: none;
 }
 
 .statusbar__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
   white-space: nowrap;
 }
 
-.statusbar__sep {
-  color: var(--color-border-strong);
+.statusbar__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-chrome-subtle);
 }
 
-/* print: only the rendered page is visible */
+.statusbar__value {
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--color-chrome-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.statusbar__value--mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 450;
+  letter-spacing: 0;
+}
+
+.statusbar__sep {
+  width: 1px;
+  height: 12px;
+  background-color: var(--color-border-strong);
+  display: inline-block;
+}
+
+/* ===== Print =====
+   Only the rendered page is visible. Preserved verbatim from the prior
+   design — the print path is correct as-is. */
 @media print {
   body {
     display: block;
