@@ -45,7 +45,17 @@ test("withPlatformLineEndings returns text with no newlines unchanged", () => {
 // (e.g. to reject) for error-path tests; by default they record and resolve
 // with `savePath`. Mounted nodes and the window.alert stub are torn down via
 // the test's after() hook so the shared jsdom body and window stay clean.
-function mountExportMenu(t, { doc, savePath, saveDialog, invoke } = {}) {
+function mountExportMenu(
+  t,
+  {
+    doc,
+    savePath,
+    saveDialog,
+    invoke,
+    isTauriAvailable = () => true,
+    onBrowserSave,
+  } = {},
+) {
   const exportBtn = document.createElement("button");
   const exportMenu = document.createElement("ul");
   exportMenu.hidden = true;
@@ -56,6 +66,7 @@ function mountExportMenu(t, { doc, savePath, saveDialog, invoke } = {}) {
 
   const saveCalls = [];
   const invokeCalls = [];
+  const browserSaveCalls = [];
   const alertCalls = [];
   const realAlert = window.alert;
   window.alert = (msg) => alertCalls.push(msg);
@@ -79,8 +90,17 @@ function mountExportMenu(t, { doc, savePath, saveDialog, invoke } = {}) {
       (async (cmd, args) => {
         invokeCalls.push([cmd, args]);
       }),
+    isTauriAvailable,
+    onBrowserSave: onBrowserSave || ((payload) => browserSaveCalls.push(payload)),
   });
-  return { exportTxt, exportHtml, saveCalls, invokeCalls, alertCalls };
+  return {
+    exportTxt,
+    exportHtml,
+    saveCalls,
+    invokeCalls,
+    browserSaveCalls,
+    alertCalls,
+  };
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -176,6 +196,56 @@ test("exportAs alerts when the write command rejects", async (t) => {
   await flush();
   assert.equal(alertCalls.length, 1);
   assert.match(alertCalls[0], /^Failed to save: EACCES/);
+});
+
+// --- Browser fallback (no Tauri runtime) -----------------------------------
+
+test("exportAs TXT triggers browser-save when Tauri is unavailable", async (t) => {
+  const parsed = { text: "line one\nline two", pages: 1, properties: {}, elements: [] };
+  const { exportTxt, saveCalls, invokeCalls, browserSaveCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "dilekce.udf" },
+    isTauriAvailable: () => false,
+  });
+  exportTxt.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(saveCalls.length, 0, "no Tauri save dialog when bridge is missing");
+  assert.equal(invokeCalls.length, 0, "no Tauri write_file_text when bridge is missing");
+  assert.equal(browserSaveCalls.length, 1);
+  assert.equal(browserSaveCalls[0].filename, "dilekce.txt");
+  assert.equal(browserSaveCalls[0].mimeType, "text/plain;charset=utf-8");
+  assert.equal(browserSaveCalls[0].contents, "line one\nline two");
+});
+
+test("exportAs HTML triggers browser-save with the standalone document", async (t) => {
+  const parsed = {
+    text: "",
+    pages: 1,
+    properties: {},
+    elements: [
+      { type: "paragraph", style: {}, runs: [{ text: "hi", kind: "content", style: {} }] },
+    ],
+  };
+  const { exportHtml, browserSaveCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "dilekce.udf" },
+    isTauriAvailable: () => false,
+  });
+  exportHtml.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(browserSaveCalls.length, 1);
+  assert.equal(browserSaveCalls[0].filename, "dilekce.html");
+  assert.equal(browserSaveCalls[0].mimeType, "text/html;charset=utf-8");
+  assert.match(browserSaveCalls[0].contents, /^<!doctype html>/i);
+  assert.ok(browserSaveCalls[0].contents.includes("<span>hi</span>"));
+});
+
+test("exportAs browser-save is a no-op when no document is loaded", async (t) => {
+  const { exportTxt, browserSaveCalls } = mountExportMenu(t, {
+    doc: null,
+    isTauriAvailable: () => false,
+  });
+  exportTxt.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(browserSaveCalls.length, 0);
 });
 
 test("defaultExportName swaps a .udf suffix for the target extension", () => {
