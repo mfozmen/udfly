@@ -15,6 +15,12 @@ function defaultIsTauriAvailable() {
 // Plain-browser save: build a Blob, point an off-screen <a download> at it,
 // click it, then revoke. The browser's own download UI (file picker or
 // silent save) takes over from there.
+//
+// revokeObjectURL is deferred to the next tick. All current browsers
+// capture the URL contents synchronously during click(), so revoking
+// inline works in practice — but the spec wording allows the URL to need
+// to remain valid until the download begins, and queueing the revoke is
+// the standard defensive idiom.
 function defaultBrowserSave({ contents, mimeType, filename }) {
   const blob = new Blob([contents], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -25,7 +31,7 @@ function defaultBrowserSave({ contents, mimeType, filename }) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 // Suggest "foo.txt" / "foo.html" from "foo.udf" rather than the more awkward
