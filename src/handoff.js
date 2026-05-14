@@ -19,20 +19,39 @@ function defaultIsTauriAvailable() {
 // click it, and resolve with the chosen File (or null if the user cancels).
 // Used when the Tauri bridge isn't available — drag-drop already works
 // without Tauri, so this just gives the Open button the same parity.
-function defaultPickFileViaBrowser() {
+//
+// 'change' fires on selection; 'cancel' is the modern (2023+) signal that
+// the user dismissed the OS picker. Pre-2023 browsers never fire 'cancel',
+// so we also backstop with a window 'focus' listener: when the window
+// regains focus after the picker closes and no file was selected, treat it
+// as a cancel. Without this, ancient browsers (or any browser hitting a
+// bug) would leave the Promise un-settled, the hidden <input> in the DOM,
+// and the loadInFlight guard stuck 'true' forever.
+export function defaultPickFileViaBrowser() {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".udf";
     input.style.display = "none";
-    // 'change' fires on selection; 'cancel' fires when the user dismisses
-    // the picker (modern browsers). Both clean up the temporary input.
+    let settled = false;
     const done = (value) => {
+      if (settled) return;
+      settled = true;
       input.remove();
+      window.removeEventListener("focus", onFocus);
       resolve(value);
+    };
+    // The 'focus' fires the instant the window regains focus, but 'change'
+    // can arrive a tick later — give it a small grace window before
+    // declaring cancel.
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!settled && !input.files?.length) done(null);
+      }, 300);
     };
     input.addEventListener("change", () => done(input.files?.[0] || null));
     input.addEventListener("cancel", () => done(null));
+    window.addEventListener("focus", onFocus);
     document.body.appendChild(input);
     input.click();
   });
