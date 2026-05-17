@@ -110,6 +110,35 @@
       </div>
     </header>
 
+    <aside
+      class="update-banner"
+      id="update-banner"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <p class="update-banner__message" id="update-banner-message"></p>
+      <div class="update-banner__actions">
+        <button
+          class="btn update-banner__install"
+          id="update-install"
+          type="button"
+          data-i18n="updater.install"
+        >
+          Şimdi Güncelle
+        </button>
+        <button
+          class="update-banner__dismiss"
+          id="update-dismiss"
+          type="button"
+          data-i18n-aria-label="updater.dismiss.aria"
+          aria-label="Güncellemeyi yok say"
+        >
+          ×
+        </button>
+      </div>
+    </aside>
+
     <main class="content" id="content">
       <section class="state state--empty" id="empty-state" data-i18n-aria-label="state.empty.aria" aria-label="Belge yok">
         <div class="empty">

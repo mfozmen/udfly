@@ -52,6 +52,14 @@ export const translations = {
     "alert.exportFailed": "Dışa aktarma başarısız: {cause}",
     "alert.saveFailed": "Kaydetme başarısız: {cause}",
     "alert.pdfExportFailed": "PDF dışa aktarma başarısız: {cause}",
+
+    // --- updater banner ---
+    "updater.available": "Udfly {version} mevcut",
+    "updater.install": "Şimdi Güncelle",
+    "updater.dismiss": "Daha Sonra",
+    "updater.dismiss.aria": "Güncellemeyi yok say",
+    "updater.installing": "Yükleniyor…",
+    "updater.failed": "Güncelleme başarısız: {cause}",
   },
   en: {
     // --- topbar ---
@@ -88,6 +96,14 @@ export const translations = {
     "alert.exportFailed": "Export failed: {cause}",
     "alert.saveFailed": "Failed to save: {cause}",
     "alert.pdfExportFailed": "PDF export failed: {cause}",
+
+    // --- updater banner ---
+    "updater.available": "Udfly {version} is available",
+    "updater.install": "Update Now",
+    "updater.dismiss": "Later",
+    "updater.dismiss.aria": "Dismiss update",
+    "updater.installing": "Installing…",
+    "updater.failed": "Update failed: {cause}",
   },
 };
 

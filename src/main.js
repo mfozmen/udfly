@@ -6,6 +6,7 @@ import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { setupExportMenu } from "./export.js";
 import { createFileLoader } from "./handoff.js";
 import { t, getLocale, setLocale, applyTranslations } from "./i18n.js";
+import { checkAndPromptForUpdate } from "./updater.js";
 
 const els = {
   filename: document.getElementById("filename"),
@@ -27,6 +28,10 @@ const els = {
   sizeInfo: document.getElementById("size-info"),
   verificationInfo: document.getElementById("verification-info"),
   langToggle: document.getElementById("lang-toggle"),
+  updateBanner: document.getElementById("update-banner"),
+  updateBannerMessage: document.getElementById("update-banner-message"),
+  updateInstall: document.getElementById("update-install"),
+  updateDismiss: document.getElementById("update-dismiss"),
 };
 
 // Apply the persisted (or default 'tr') locale to every [data-i18n] and
@@ -41,7 +46,29 @@ function refreshLocale() {
   // Reflect the active locale on the toggle so CSS can highlight the
   // current selection.
   els.langToggle.setAttribute("data-locale", locale);
+  // The updater banner's headline contains a runtime-interpolated
+  // version ('Udfly 1.2.0 mevcut') that the static data-i18n sweep
+  // can't render; re-format it explicitly if it's currently showing.
+  renderUpdateMessage();
 }
+
+// Banner state lives outside refreshLocale so the locale toggle can
+// re-render the version message without forgetting it. null = banner
+// not currently announcing an update.
+let currentUpdateVersion = null;
+let currentUpdateError = null;
+function renderUpdateMessage() {
+  if (currentUpdateError !== null) {
+    els.updateBannerMessage.textContent = t("updater.failed", {
+      cause: currentUpdateError,
+    });
+  } else if (currentUpdateVersion !== null) {
+    els.updateBannerMessage.textContent = t("updater.available", {
+      version: currentUpdateVersion,
+    });
+  }
+}
+
 refreshLocale();
 
 // The currently-loaded document ({ parsed, filename }) or null when nothing
@@ -234,3 +261,56 @@ window.addEventListener("keydown", (e) => {
 });
 
 showState("empty");
+
+// Auto-update: fire once at boot. updater.js short-circuits when the
+// Tauri runtime isn't available, so this is a no-op in plain Vite dev.
+// In production it asks GitHub Releases via tauri-plugin-updater and,
+// if a newer signed bundle exists, surfaces the banner. The Tauri
+// plugins are dynamic-imported so the bundle stays lean when the check
+// path never runs.
+checkAndPromptForUpdate({
+  deps: {
+    isTauriAvailable: () =>
+      typeof window !== "undefined" &&
+      typeof window.__TAURI_INTERNALS__ !== "undefined",
+    check: async () => {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      return check();
+    },
+    relaunch: async () => {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    },
+  },
+  ui: {
+    showAvailable: (version, onInstall) => {
+      currentUpdateVersion = version;
+      currentUpdateError = null;
+      renderUpdateMessage();
+      els.updateInstall.disabled = false;
+      els.updateInstall.textContent = t("updater.install");
+      els.updateBanner.hidden = false;
+      els.updateInstall.onclick = async () => {
+        els.updateInstall.disabled = true;
+        els.updateInstall.textContent = t("updater.installing");
+        await onInstall();
+      };
+      els.updateDismiss.onclick = () => {
+        els.updateBanner.hidden = true;
+        currentUpdateVersion = null;
+        currentUpdateError = null;
+      };
+    },
+    showError: (cause) => {
+      currentUpdateError = cause;
+      renderUpdateMessage();
+      els.updateInstall.disabled = false;
+      els.updateInstall.textContent = t("updater.install");
+    },
+    hide: () => {
+      els.updateBanner.hidden = true;
+      currentUpdateVersion = null;
+      currentUpdateError = null;
+    },
+  },
+});
