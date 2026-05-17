@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { setupExportMenu } from "./export.js";
 import { createFileLoader } from "./handoff.js";
+import { t, getLocale, setLocale, applyTranslations } from "./i18n.js";
 
 const els = {
   filename: document.getElementById("filename"),
@@ -25,7 +26,23 @@ const els = {
   pagesInfo: document.getElementById("pages-info"),
   sizeInfo: document.getElementById("size-info"),
   verificationInfo: document.getElementById("verification-info"),
+  langToggle: document.getElementById("lang-toggle"),
 };
+
+// Apply the persisted (or default 'tr') locale to every [data-i18n] and
+// [data-i18n-aria-label] node on load. The HTML ships with Turkish text
+// inline so there's no pre-paint flash if JS is slow to wire up — this
+// only re-runs the swap when the user has chosen English in a prior
+// session (or after they click the lang toggle).
+function refreshLocale() {
+  const locale = getLocale();
+  applyTranslations(document.body, locale);
+  document.documentElement.setAttribute("lang", locale);
+  // Reflect the active locale on the toggle so CSS can highlight the
+  // current selection.
+  els.langToggle.setAttribute("data-locale", locale);
+}
+refreshLocale();
 
 // The currently-loaded document ({ parsed, filename }) or null when nothing
 // is loaded / an error overlay is showing. The export menu reads this via
@@ -133,7 +150,7 @@ async function openFile(file) {
   try {
     buffer = await file.arrayBuffer();
   } catch (cause) {
-    showError(`Failed to read ${file.name}: ${cause.message}`);
+    showError(t("load.readFailed", { name: file.name, message: cause.message }));
     return;
   }
   // buffer.byteLength matches what the Tauri loadFromPath path passes for
@@ -178,7 +195,7 @@ window.addEventListener("drop", async (e) => {
   els.dropoverlay.classList.remove("dropoverlay--active");
   const file = [...(e.dataTransfer?.files || [])].find(isUdfFile);
   if (!file) {
-    showError("Only .udf files are supported.");
+    showError(t("drop.notUdf"));
     return;
   }
   await openFile(file);
@@ -195,6 +212,13 @@ els.printBtn.addEventListener("click", () => {
 els.errorRetry.addEventListener("click", () => {
   setFilename("");
   showState("empty");
+});
+
+// Language toggle: flip TR ↔ EN, persist, re-render every translatable
+// node. Keyboard activation comes for free from <button>.
+els.langToggle.addEventListener("click", () => {
+  setLocale(getLocale() === "tr" ? "en" : "tr");
+  refreshLocale();
 });
 
 window.addEventListener("keydown", (e) => {

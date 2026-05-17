@@ -16,6 +16,9 @@ const {
   setupExportMenu,
   buildPdfOptions,
 } = await import("../src/export.js");
+// Imported as `tr` to avoid shadowing node:test's `t` (test context) that
+// the test callbacks below receive as their first argument.
+const { t: tr } = await import("../src/i18n.js");
 
 const WIN_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Edg/120.0";
@@ -199,7 +202,13 @@ test("exportAs alerts and writes nothing when the save dialog rejects", async (t
   await flush();
   assert.equal(invokeCalls.length, 0, "no write when the picker fails");
   assert.equal(alertCalls.length, 1);
-  assert.match(alertCalls[0], /^Export failed: .*picker exploded/);
+  // Alert text is locale-aware via i18n; assemble the expected string
+  // through t() so the assertion stays correct regardless of which
+  // locale localStorage happens to hold at test time.
+  assert.equal(
+    alertCalls[0],
+    tr("alert.exportFailed", { cause: "picker exploded" }),
+  );
 });
 
 test("exportAs alerts when the write command rejects", async (t) => {
@@ -214,7 +223,7 @@ test("exportAs alerts when the write command rejects", async (t) => {
   exportTxt.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await flush();
   assert.equal(alertCalls.length, 1);
-  assert.match(alertCalls[0], /^Failed to save: EACCES/);
+  assert.equal(alertCalls[0], tr("alert.saveFailed", { cause: "EACCES" }));
 });
 
 // --- buildPdfOptions --------------------------------------------------------
@@ -274,7 +283,10 @@ test("exportPdf alerts when generatePdf rejects", async (t) => {
   exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await flush();
   assert.equal(alertCalls.length, 1);
-  assert.match(alertCalls[0], /^PDF export failed: .*html2pdf exploded/);
+  assert.equal(
+    alertCalls[0],
+    tr("alert.pdfExportFailed", { cause: "html2pdf exploded" }),
+  );
 });
 
 // --- Browser fallback (no Tauri runtime) -----------------------------------

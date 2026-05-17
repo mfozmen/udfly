@@ -1,4 +1,5 @@
 import { renderToStandaloneHTML } from "./render.js";
+import { t } from "./i18n.js";
 
 // Options passed to html2pdf(). Extracted as a pure function so the
 // pagebreak config — which is the substantive policy choice here — can
@@ -206,14 +207,14 @@ export function setupExportMenu({
       // Save failures shouldn't wipe the loaded document — the user's view
       // wasn't broken, only the export. Surface via alert() so the page
       // stays intact and they can retry.
-      window.alert(`Export failed: ${cause.message || cause}`);
+      window.alert(t("alert.exportFailed", { cause: cause.message || cause }));
       return;
     }
     if (!path) return; // user canceled the save picker
     try {
       await invoke("write_file_text", { path, contents });
     } catch (cause) {
-      window.alert(`Failed to save: ${cause}`);
+      window.alert(t("alert.saveFailed", { cause }));
     }
   }
 
@@ -233,7 +234,7 @@ export function setupExportMenu({
     try {
       await generatePdf(els.page, filename);
     } catch (cause) {
-      window.alert(`PDF export failed: ${cause.message || cause}`);
+      window.alert(t("alert.pdfExportFailed", { cause: cause.message || cause }));
     }
   }
 
