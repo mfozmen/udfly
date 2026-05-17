@@ -54,6 +54,7 @@ function mountExportMenu(
     invoke,
     isTauriAvailable = () => true,
     onBrowserSave,
+    generatePdf,
   } = {},
 ) {
   const exportBtn = document.createElement("button");
@@ -61,12 +62,18 @@ function mountExportMenu(
   exportMenu.hidden = true;
   const exportTxt = document.createElement("button");
   const exportHtml = document.createElement("button");
-  exportMenu.append(exportTxt, exportHtml);
-  document.body.append(exportBtn, exportMenu);
+  const exportPdf = document.createElement("button");
+  exportMenu.append(exportTxt, exportHtml, exportPdf);
+  // Stand-in for the real .page element. setupExportMenu needs a reference
+  // to it so the PDF generator knows what DOM subtree to render.
+  const page = document.createElement("article");
+  page.id = "page";
+  document.body.append(exportBtn, exportMenu, page);
 
   const saveCalls = [];
   const invokeCalls = [];
   const browserSaveCalls = [];
+  const generatePdfCalls = [];
   const alertCalls = [];
   const realAlert = window.alert;
   window.alert = (msg) => alertCalls.push(msg);
@@ -74,10 +81,11 @@ function mountExportMenu(
     window.alert = realAlert;
     exportBtn.remove();
     exportMenu.remove();
+    page.remove();
   });
 
   setupExportMenu({
-    els: { exportBtn, exportMenu, exportTxt, exportHtml },
+    els: { exportBtn, exportMenu, exportTxt, exportHtml, exportPdf, page },
     getDocument: () => doc,
     saveDialog:
       saveDialog ||
@@ -92,13 +100,20 @@ function mountExportMenu(
       }),
     isTauriAvailable,
     onBrowserSave: onBrowserSave || ((payload) => browserSaveCalls.push(payload)),
+    generatePdf:
+      generatePdf ||
+      (async (element, filename) =>
+        generatePdfCalls.push({ tagName: element.tagName, id: element.id, filename })),
   });
   return {
     exportTxt,
     exportHtml,
+    exportPdf,
+    page,
     saveCalls,
     invokeCalls,
     browserSaveCalls,
+    generatePdfCalls,
     alertCalls,
   };
 }
@@ -196,6 +211,47 @@ test("exportAs alerts when the write command rejects", async (t) => {
   await flush();
   assert.equal(alertCalls.length, 1);
   assert.match(alertCalls[0], /^Failed to save: EACCES/);
+});
+
+// --- Export as PDF ----------------------------------------------------------
+
+test("exportPdf hands the page element and a .pdf filename to generatePdf", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { exportPdf, page, generatePdfCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "dilekce.udf" },
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(generatePdfCalls.length, 1);
+  // The PDF is rasterized from the .page subtree, not from raw parsed
+  // text — that's how html2pdf.js produces a visually faithful copy of
+  // what the user is reading.
+  assert.equal(generatePdfCalls[0].id, "page");
+  assert.equal(generatePdfCalls[0].tagName, page.tagName);
+  // Filename derived from the source .udf name with .pdf extension, the
+  // same pattern TXT and HTML use.
+  assert.equal(generatePdfCalls[0].filename, "dilekce.pdf");
+});
+
+test("exportPdf is a no-op when no document is loaded", async (t) => {
+  const { exportPdf, generatePdfCalls } = mountExportMenu(t, { doc: null });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(generatePdfCalls.length, 0);
+});
+
+test("exportPdf alerts when generatePdf rejects", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { exportPdf, alertCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "x.udf" },
+    generatePdf: async () => {
+      throw new Error("html2pdf exploded");
+    },
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(alertCalls.length, 1);
+  assert.match(alertCalls[0], /^PDF export failed: .*html2pdf exploded/);
 });
 
 // --- Browser fallback (no Tauri runtime) -----------------------------------
