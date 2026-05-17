@@ -1,11 +1,37 @@
 import { renderToStandaloneHTML } from "./render.js";
 
+// Options passed to html2pdf(). Extracted as a pure function so the
+// pagebreak config — which is the substantive policy choice here — can
+// be unit-tested without spinning up html2pdf itself.
+//
+// pagebreak.mode: 'avoid-all' tells html2pdf to push any element that
+// would straddle a page boundary entirely onto the next page rather
+// than splitting through it. Without this, the default ['css', 'legacy']
+// cheerfully slices text rows in half at page boundaries — verification
+// codes, signature blocks, table cells all end up cut. 'css' stays for
+// per-element page-break-* honoring; 'legacy' for explicit
+// .html2pdf__page-break markers (we don't emit them, but the option is
+// cheap and consistent with the library's docs).
+//
+// A4 portrait with a 10mm margin and JPEG image quality 0.95 are the
+// sensible defaults for legal-style documents. html2canvas runs at
+// scale 2 for retina-readable rasterization.
+export function buildPdfOptions(filename) {
+  return {
+    filename,
+    margin: 10,
+    image: { type: "jpeg", quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+  };
+}
+
 // Default PDF generator: rasterize the page element (via html2canvas
 // internally) into a PDF and trigger a save-as. Output is image-based,
 // which trades searchability for perfect visual fidelity and zero font
 // embedding work — html2pdf renders via the browser's own engine, so
-// Turkish characters work natively. A4 portrait with a small margin is
-// the sensible default for legal-style documents.
+// Turkish characters work natively.
 //
 // html2pdf.js references the browser-only `self` global at module-eval
 // time, so loading it in Node (where the tests live) crashes. Dynamic-
@@ -14,16 +40,7 @@ import { renderToStandaloneHTML } from "./render.js";
 // the import path.
 async function defaultGeneratePdf(element, filename) {
   const { default: html2pdf } = await import("html2pdf.js");
-  return html2pdf()
-    .from(element)
-    .set({
-      filename,
-      margin: 10,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    })
-    .save();
+  return html2pdf().from(element).set(buildPdfOptions(filename)).save();
 }
 
 // Detect whether we're running inside the Tauri shell. Tauri injects
