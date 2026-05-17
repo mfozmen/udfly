@@ -200,6 +200,63 @@ body {
   background-color: var(--color-border-strong);
 }
 
+/* Language toggle — a compact 'TR | EN' pair sitting at the right edge
+   of the topbar actions. Visually quieter than the action buttons: no
+   hover fill, just contrast between the active and inactive sides.
+   data-locale on the button is updated by main.js whenever the locale
+   changes; the CSS reads it to pick which span gets full foreground
+   colour vs. the muted treatment. */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-chrome-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-short) var(--easing-standard);
+}
+
+.lang-toggle:hover {
+  background-color: rgba(26, 24, 22, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  .lang-toggle:hover {
+    background-color: rgba(237, 233, 224, 0.06);
+  }
+}
+
+.lang-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.lang-toggle__option {
+  color: var(--color-chrome-subtle);
+  transition: color var(--duration-short) var(--easing-standard);
+}
+
+.lang-toggle__sep {
+  color: var(--color-border-strong);
+  user-select: none;
+}
+
+/* Highlight the currently-active locale by reading the data-locale
+   attribute main.js writes on the toggle. */
+.lang-toggle[data-locale="tr"] .lang-toggle__option[data-locale="tr"],
+.lang-toggle[data-locale="en"] .lang-toggle__option[data-locale="en"] {
+  color: var(--color-chrome-fg);
+  font-weight: 600;
+}
+
 /* ===== Buttons =====
    Tertiary by default (background only on hover). Reads as a control
    without competing with the document. Active and disabled states are

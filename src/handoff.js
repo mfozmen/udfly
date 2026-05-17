@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { basename } from "./path.js";
+import { t } from "./i18n.js";
 
 // Detect whether we're running inside the Tauri shell. Tauri injects
 // __TAURI_INTERNALS__ on window before the frontend mounts; its absence
@@ -92,7 +93,7 @@ export function createFileLoader({
     try {
       bytes = await invoke("read_file_bytes", { path });
     } catch (cause) {
-      showError(`Failed to read ${filename}: ${cause}`);
+      showError(t("load.readFailed", { name: filename, message: cause }));
       return;
     }
     const buffer = new Uint8Array(bytes).buffer;
@@ -127,7 +128,7 @@ export function createFileLoader({
     try {
       buffer = await file.arrayBuffer();
     } catch (cause) {
-      showError(`Failed to read ${file.name}: ${cause.message || cause}`);
+      showError(t("load.readFailed", { name: file.name, message: cause.message || cause }));
       return;
     }
     // Use buffer.byteLength rather than file.size so every loadBytes call
