@@ -58,8 +58,17 @@ pub fn run() {
     // in the run-loop callback below.)
     let argv_paths: VecDeque<String> = std::env::args().skip(1).take(1).collect();
 
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init());
+    // Updater + process plugins exist only on desktop targets — gating
+    // mirrors the Cargo.toml `[target.'cfg(not(any(android, ios)))']`
+    // block, keeping mobile builds (no updater story yet) compilable.
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+
+    let app = builder
         .manage(PendingPaths(Mutex::new(argv_paths)))
         .invoke_handler(tauri::generate_handler![
             read_file_bytes,
