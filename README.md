@@ -2,116 +2,120 @@
   <img src="assets/icon.png" alt="udfly" width="140">
 </p>
 
+<p align="center">
+  <strong>Türkçe</strong> · <a href="README.en.md">English</a>
+</p>
+
 # Udfly
 
-A fast, portable viewer for UYAP `.udf` documents. Drop a `.udf` file on the window, see the document, print it. No Java required.
+UYAP `.udf` belgeleri için hızlı, taşınabilir bir görüntüleyici. `.udf` dosyasını pencereye sürükleyip bırakın, belgeyi görün, yazdırın. Java gerekmez.
 
-![Udfly rendering a sanitized mediation application](docs/screenshots/ui-loaded-application.png)
+![Udfly bir anonimleştirilmiş arabuluculuk başvurusunu görüntülerken](docs/screenshots/ui-loaded-application.png)
 
-## Why this exists
+## Bu proje neden var
 
-UYAP (Ulusal Yargı Ağı Bilişim Sistemi — the Turkish judicial information system) issues many of its documents as `.udf` files: a ZIP container holding XML markup with an offset-based styling layer pointing into a CDATA text block. The reference editor UYAP ships is a Java desktop app that's awkward to install on modern machines, refuses to open on some systems, and is editing-oriented rather than viewing-oriented.
+UYAP (Ulusal Yargı Ağı Bilişim Sistemi) belgelerinin çoğunu `.udf` formatında üretir: CDATA metin bloğuna işaret eden konum tabanlı bir stil katmanı içeren XML işaretlemesini barındıran bir ZIP konteyneri. UYAP'ın sağladığı referans editör, modern makinelere kurulması zor, bazı sistemlerde açılmayı reddeden ve görüntülemeden çok düzenlemeye yönelik bir Java masaüstü uygulamasıdır.
 
-Udfly is read-only, lightweight, single-binary, and exists to let lawyers and citizens just *open* a `.udf` they received without fighting an installer.
+Udfly salt-okunur, hafif, tek-ikili (single-binary) bir uygulamadır ve avukatlar ile vatandaşların aldıkları bir `.udf` dosyasını kurulum sancısı çekmeden *yalnızca açabilmeleri* için vardır.
 
-## Who this is for
+## Kimler için
 
-- **Turkish lawyers** receiving `.udf` filings from courts and counsel.
-- **Citizens** receiving `.udf` documents from UYAP correspondence.
-- **Developers** working with UYAP integrations who need a ground-truth viewer to compare against their own parsing.
+- Mahkemelerden ve karşı taraflardan `.udf` tebligatları alan **Türk avukatları**.
+- UYAP yazışmalarında `.udf` belgeleri alan **vatandaşlar**.
+- Kendi parser'larını karşılaştırmak için gerçek bir görüntüleyiciye ihtiyaç duyan, UYAP entegrasyonları üzerinde çalışan **geliştiriciler**.
 
-## Installation
+## Kurulum
 
-Pre-built binaries for Windows, macOS, and Linux are attached to each [GitHub Release](https://github.com/mfozmen/udfly/releases). Download the artifact for your platform and run it.
+Windows, macOS ve Linux için derlenmiş ikili dosyalar her [GitHub Sürümüne](https://github.com/mfozmen/udfly/releases) eklenmiştir. Platformunuza uygun dosyayı indirip çalıştırın.
 
-| Platform | Artifact |
-|----------|----------|
-| Windows  | `Udfly_x.y.z_x64-setup.exe` (NSIS installer) or `Udfly_x.y.z_x64-portable.exe` (single self-contained executable) |
+| Platform | Dosya |
+|----------|-------|
+| Windows  | `Udfly_x.y.z_x64-setup.exe` (NSIS kurulumu) veya `Udfly_x.y.z_x64-portable.exe` (kurulum gerektirmeyen tek dosyalık çalıştırılabilir) |
 | macOS    | `Udfly_x.y.z_universal.dmg` (Apple Silicon + Intel) |
-| Linux    | `Udfly_x.y.z_amd64.deb` (Debian / Ubuntu) or `udfly_x.y.z_amd64.AppImage` |
+| Linux    | `Udfly_x.y.z_amd64.deb` (Debian / Ubuntu) veya `udfly_x.y.z_amd64.AppImage` |
 
-The portable Windows variant is the raw Tauri binary — no installer, no registry entries, no admin rights. It depends on Microsoft Edge WebView2, which ships preinstalled on Windows 11 and on every recent Windows 10 update; if WebView2 is missing on an older system, install the [Evergreen Standalone Installer](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) once and the portable `.exe` runs.
+Windows taşınabilir sürümü ham Tauri ikilisidir — kurulum yok, kayıt defteri girdisi yok, yönetici izni gerekmiyor. Microsoft Edge WebView2'ye bağlıdır; Windows 11'de ve son güncel Windows 10 sürümlerinde önyüklü gelir. Eski bir sistemde WebView2 eksikse [Evergreen Bağımsız Yükleyicisini](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) bir kez kurun, ardından taşınabilir `.exe` çalışır.
 
-### First-run security warnings
+### İlk açılışta güvenlik uyarıları
 
-These releases are **not code-signed**. The first time you launch Udfly, your OS will warn you:
+Bu sürümler **kod imzalı değildir**. Udfly'ı ilk açtığınızda işletim sisteminiz uyarı verecektir:
 
-- **Windows SmartScreen**: "Windows protected your PC." Click "More info" → "Run anyway."
-- **macOS Gatekeeper**: "Udfly can't be opened because Apple cannot check it for malicious software." Two paths, depending on your macOS version:
-  - **macOS 15 Sequoia and later**: open System Settings → **Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the Udfly entry. The right-click → Open shortcut was removed in Sequoia for unsigned downloads.
-  - **macOS 14 Sonoma and earlier**: the right-click → Open shortcut still works — right-click (or Control-click) the app in Finder, choose "Open," then confirm.
+- **Windows SmartScreen**: "Windows bilgisayarınızı korudu." → "Ek bilgi" → "Yine de çalıştır."
+- **macOS Gatekeeper**: "Udfly açılamıyor, çünkü Apple kötü amaçlı yazılım denetimi yapamıyor." macOS sürümünüze göre iki yol:
+  - **macOS 15 Sequoia ve sonrası**: Sistem Ayarları → **Gizlilik ve Güvenlik** → aşağı kaydırın → Udfly girdisinin yanındaki **Yine de Aç** düğmesine basın. Sequoia ile birlikte imzasız indirmelerde sağ-tık → Aç kısayolu kaldırıldı.
+  - **macOS 14 Sonoma ve öncesi**: sağ-tık → Aç kısayolu hâlâ çalışır — Finder'da uygulamayı sağ-tıklayın (veya Control-tıklayın), "Aç" seçeneğine basıp onaylayın.
 
-  macOS remembers the override on either path; you only do this once per install.
-- **Linux**: no signing prompt; the AppImage may need `chmod +x udfly_*.AppImage` before running.
+  macOS bu izni her iki yolda da hatırlar; her kurulumda yalnızca bir kez yapmanız gerekir.
+- **Linux**: imza istemi yok; AppImage çalıştırılmadan önce `chmod +x udfly_*.AppImage` gerekebilir.
 
-If you want to verify the binary instead of trusting the warning, build from source — the steps are below.
+İkili dosyayı uyarıya güvenmek yerine doğrulamak isterseniz kaynaktan derleyin — adımlar aşağıdadır.
 
-## Usage
+## Kullanım
 
-1. Launch the app.
-2. Drag a `.udf` file onto the window.
-3. The document renders. Use the **Print** button or `Ctrl/Cmd+P` to print.
+1. Uygulamayı açın.
+2. Bir `.udf` dosyasını pencereye sürükleyin.
+3. Belge işlenir. Yazdırmak için **Print** düğmesini veya `Ctrl/Cmd+P` kısayolunu kullanın.
 
-The status bar shows the document's page count, file size, and the UYAP verification code (`uyapdogrulamakodu`) when present.
+Durum çubuğu belgenin sayfa sayısını, dosya boyutunu ve mevcutsa UYAP doğrulama kodunu (`uyapdogrulamakodu`) gösterir.
 
-## Building from source
+## Kaynaktan derleme
 
-### Prerequisites
+### Önkoşullar
 
-- [Node.js 20+](https://nodejs.org/) (with `npm`)
-- [Rust stable](https://www.rust-lang.org/tools/install) (latest)
-- Platform Tauri prerequisites — see <https://tauri.app/start/prerequisites/>:
-  - Linux: `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf` (`patchelf` is required for AppImage bundling, which the Linux build always attempts via `bundle.targets: "all"` with no platform override)
+- [Node.js 20+](https://nodejs.org/) (`npm` ile birlikte)
+- [Rust stable](https://www.rust-lang.org/tools/install) (en güncel)
+- Platforma özgü Tauri önkoşulları — bakınız: <https://tauri.app/start/prerequisites/>:
+  - Linux: `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf` (`patchelf`, AppImage paketlemesi için zorunludur; Linux derlemesi `bundle.targets: "all"` ayarıyla bunu her zaman dener)
   - macOS: Xcode Command Line Tools
-  - Windows: Microsoft C++ Build Tools, WebView2 (preinstalled on Windows 11)
+  - Windows: Microsoft C++ Build Tools, WebView2 (Windows 11'de önyüklü)
 
-### Commands
+### Komutlar
 
 ```bash
 git clone https://github.com/mfozmen/udfly.git
 cd udfly
 npm install
 
-# Run in development with hot-reload:
+# Geliştirme modunda canlı yenileme ile çalıştırma:
 npm run tauri dev
 
-# Build a production binary for your platform:
+# Platformunuz için üretim ikilisi derleme:
 npm run tauri build
 ```
 
-The dev workflow runs Vite for the frontend and `cargo run` for the Tauri shell; first compile takes a couple of minutes, subsequent runs are incremental.
+Geliştirme akışı, ön yüz için Vite ve Tauri kabuğu için `cargo run` çalıştırır; ilk derleme birkaç dakika sürer, sonraki çalıştırmalar artışlıdır.
 
-### Running the test suite
+### Test takımını çalıştırma
 
 ```bash
 npm test
 ```
 
-The parser, renderer, and security tests live under `test/` and cover both fixtures in `samples/fixtures/`. The UI shell is tested manually — verify by dropping each sample fixture and confirming the rendered output matches the screenshots in `docs/screenshots/`.
+Parser, render ve güvenlik testleri `test/` altında bulunur ve `samples/fixtures/` içindeki her iki örnek dosyayı kapsar. Uygulamanın görsel kabuğu manuel olarak test edilir — her örnek dosyayı sürükleyip bırakıp çıktının `docs/screenshots/` içindeki ekran görüntüleriyle eşleştiğini doğrulayın.
 
-## About the UDF format
+## UDF formatı hakkında
 
-The `.udf` format is a ZIP archive containing:
+`.udf` formatı şunları içeren bir ZIP arşividir:
 
-- `content.xml` — the document's text in a top-level `<content><![CDATA[…]]></content>` block, plus a sibling `<elements>` tree that styles the text via offset/length pointers into the CDATA. Resolver chains in `<styles>` provide cascading defaults.
-- `documentproperties.xml` (optional) — UYAP metadata, including the `uyapdogrulamakodu` verification code.
-- `sign.sgn` (optional) — a digital signature blob, ignored by this viewer.
+- `content.xml` — belgenin metnini üst düzey bir `<content><![CDATA[…]]></content>` bloğunda barındırır; ayrıca metni CDATA'ya konum/uzunluk işaretçileri üzerinden biçimlendiren kardeş bir `<elements>` ağacı bulunur. `<styles>` içindeki çözücü zincirleri kademeli varsayılanları sağlar.
+- `documentproperties.xml` (isteğe bağlı) — UYAP üst verisi, içinde `uyapdogrulamakodu` doğrulama kodu da bulunur.
+- `sign.sgn` (isteğe bağlı) — dijital imza verisi; bu görüntüleyici tarafından göz ardı edilir.
 
-The format **has no public specification**. This implementation was reverse-engineered by inspecting real `.udf` files; the format details documented in `CLAUDE_CODE_BRIEF.md` reflect what was observed, not an official spec. UYAP may change the format at any time without notice.
+Bu formatın **kamuya açık bir spesifikasyonu yoktur**. Bu uygulama gerçek `.udf` dosyaları incelenerek tersine mühendislikle çıkarılmıştır; `CLAUDE_CODE_BRIEF.md` içindeki format ayrıntıları gözlemlenen davranışları yansıtır, resmi bir spesifikasyon değildir. UYAP biçimi önceden uyarmadan değiştirebilir.
 
-## Disclaimer
+## Sorumluluk reddi
 
-Udfly is **not affiliated with UYAP, Türkiye Cumhuriyeti Adalet Bakanlığı (Ministry of Justice), or any official body**. It's an independent open-source project that reads a publicly-distributed file format. Use at your own discretion; nothing this viewer renders should be treated as a substitute for the original UYAP-issued document where legal authority matters.
+Udfly **UYAP, Türkiye Cumhuriyeti Adalet Bakanlığı veya herhangi bir resmi kurumla bağlantılı değildir**. Kamuya açık bir dosya formatını okuyan bağımsız, açık kaynaklı bir projedir. Kendi sorumluluğunuzda kullanın; bu görüntüleyicinin ürettiği hiçbir çıktı, hukuki yetkinin önemli olduğu durumlarda UYAP'ın ürettiği özgün belgenin yerine geçecek şekilde değerlendirilmemelidir.
 
-## Contributing
+## Katkıda bulunmak
 
-Pull requests are welcome — especially:
+PR'lar memnuniyetle karşılanır — özellikle:
 
-- **Sanitized test fixtures** that exercise edge cases the current samples don't cover (italic / strikeOut runs, multi-row tables with column spans, headers with multiple paragraphs, etc.). Replace any personal data with dummy values **of identical character length** so all `startOffset` / `length` pointers in the `<elements>` section stay valid.
-- **Bug reports** with a sanitized fixture that reproduces the issue, attached to a GitHub issue.
+- Mevcut örneklerin kapsamadığı sınır durumlarını test eden **anonimleştirilmiş test örnekleri** (italik / üstü çizili runlar, çoklu satırlı tablolar, birden fazla paragraflı başlıklar, vb.). Tüm kişisel verileri **karakter uzunluğu aynı** olacak şekilde dummy değerlerle değiştirin; böylece `<elements>` bölümündeki `startOffset` / `length` işaretçileri geçerli kalır.
+- Sorunu yeniden üreten anonimleştirilmiş bir örnek dosyayla birlikte gönderilen, bir GitHub issue'sına iliştirilmiş **hata bildirimleri**.
 
-Please read [`CLAUDE.md`](CLAUDE.md) before opening a PR — the project has strict rules around TDD, branch-per-change, and conventional commits.
+PR açmadan önce lütfen [`CLAUDE.md`](CLAUDE.md) dosyasını okuyun — proje TDD, branş-başına-değişiklik ve conventional commits konularında katı kurallara sahiptir.
 
-## License
+## Lisans
 
-[MIT](LICENSE) — Copyright (c) 2026 Mehmet Fahri Özmen.
+[MIT](LICENSE) — Telif Hakkı (c) 2026 Mehmet Fahri Özmen.
