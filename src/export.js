@@ -1,5 +1,31 @@
 import { renderToStandaloneHTML } from "./render.js";
 
+// Default PDF generator: rasterize the page element (via html2canvas
+// internally) into a PDF and trigger a save-as. Output is image-based,
+// which trades searchability for perfect visual fidelity and zero font
+// embedding work — html2pdf renders via the browser's own engine, so
+// Turkish characters work natively. A4 portrait with a small margin is
+// the sensible default for legal-style documents.
+//
+// html2pdf.js references the browser-only `self` global at module-eval
+// time, so loading it in Node (where the tests live) crashes. Dynamic-
+// importing it inside the function defers evaluation until first PDF
+// export — and tests that inject their own generatePdf never trigger
+// the import path.
+async function defaultGeneratePdf(element, filename) {
+  const { default: html2pdf } = await import("html2pdf.js");
+  return html2pdf()
+    .from(element)
+    .set({
+      filename,
+      margin: 10,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    })
+    .save();
+}
+
 // Detect whether we're running inside the Tauri shell. Tauri injects
 // __TAURI_INTERNALS__ on window before the frontend mounts; its absence
 // means the page is being served by plain Vite (npm run dev) or another
@@ -86,6 +112,7 @@ export function setupExportMenu({
   invoke,
   isTauriAvailable = defaultIsTauriAvailable,
   onBrowserSave = defaultBrowserSave,
+  generatePdf = defaultGeneratePdf,
 }) {
   function open() {
     els.exportMenu.hidden = false;
@@ -173,6 +200,26 @@ export function setupExportMenu({
     }
   }
 
+  // Export-as-PDF differs from TXT/HTML: there's no bytes-to-disk step on
+  // either Tauri or browser, because html2pdf renders the .page subtree
+  // through html2canvas and triggers the browser's own download. The same
+  // <a download> mechanism the Blob fallback uses for TXT/HTML works here
+  // too, so no separate Tauri path is needed. The result is an image-based
+  // PDF — visually identical to what's on screen, but not text-searchable.
+  // That trade was the user's call; searchability would need either a
+  // jsPDF vector-text pipeline (with font embedding) or a Rust-side
+  // webview print-to-pdf, both significantly more work.
+  async function exportPdf() {
+    const doc = getDocument();
+    if (!doc || !doc.parsed) return;
+    const filename = defaultExportName(doc.filename, "pdf");
+    try {
+      await generatePdf(els.page, filename);
+    } catch (cause) {
+      window.alert(`PDF export failed: ${cause.message || cause}`);
+    }
+  }
+
   els.exportTxt.addEventListener("click", () => {
     close();
     exportAs("txt");
@@ -180,6 +227,10 @@ export function setupExportMenu({
   els.exportHtml.addEventListener("click", () => {
     close();
     exportAs("html");
+  });
+  els.exportPdf.addEventListener("click", () => {
+    close();
+    exportPdf();
   });
 
   return { close };

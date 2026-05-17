@@ -14,6 +14,7 @@ const els = {
   exportMenu: document.getElementById("export-menu"),
   exportTxt: document.getElementById("export-txt"),
   exportHtml: document.getElementById("export-html"),
+  exportPdf: document.getElementById("export-pdf"),
   emptyState: document.getElementById("empty-state"),
   pageView: document.getElementById("page-view"),
   page: document.getElementById("page"),
