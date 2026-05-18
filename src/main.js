@@ -7,6 +7,7 @@ import { setupExportMenu } from "./export.js";
 import { createFileLoader } from "./handoff.js";
 import { t, getLocale, setLocale, applyTranslations } from "./i18n.js";
 import { checkAndPromptForUpdate } from "./updater.js";
+import { createUpdaterUi } from "./updater-ui.js";
 
 const els = {
   filename: document.getElementById("filename"),
@@ -34,6 +35,12 @@ const els = {
   updateDismiss: document.getElementById("update-dismiss"),
 };
 
+// Updater UI adapter — owns the banner DOM wiring and the runtime-
+// interpolated headline (which the static data-i18n sweep can't render).
+// Created once at boot; refreshLocale() calls into its refreshLocale()
+// hook so the version message follows the active language.
+const updaterUi = createUpdaterUi(els);
+
 // Apply the persisted (or default 'tr') locale to every [data-i18n] and
 // [data-i18n-aria-label] node on load. The HTML ships with Turkish text
 // inline so there's no pre-paint flash if JS is slow to wire up — this
@@ -46,29 +53,10 @@ function refreshLocale() {
   // Reflect the active locale on the toggle so CSS can highlight the
   // current selection.
   els.langToggle.setAttribute("data-locale", locale);
-  // The updater banner's headline contains a runtime-interpolated
-  // version ('Udfly 1.2.0 mevcut') that the static data-i18n sweep
-  // can't render; re-format it explicitly if it's currently showing.
-  renderUpdateMessage();
+  // Banner's runtime-interpolated headline lives outside the data-i18n
+  // sweep; the adapter knows how to re-render it.
+  updaterUi.refreshLocale();
 }
-
-// Banner state lives outside refreshLocale so the locale toggle can
-// re-render the version message without forgetting it. null = banner
-// not currently announcing an update.
-let currentUpdateVersion = null;
-let currentUpdateError = null;
-function renderUpdateMessage() {
-  if (currentUpdateError !== null) {
-    els.updateBannerMessage.textContent = t("updater.failed", {
-      cause: currentUpdateError,
-    });
-  } else if (currentUpdateVersion !== null) {
-    els.updateBannerMessage.textContent = t("updater.available", {
-      version: currentUpdateVersion,
-    });
-  }
-}
-
 refreshLocale();
 
 // The currently-loaded document ({ parsed, filename }) or null when nothing
@@ -282,35 +270,10 @@ checkAndPromptForUpdate({
       await relaunch();
     },
   },
-  ui: {
-    showAvailable: (version, onInstall) => {
-      currentUpdateVersion = version;
-      currentUpdateError = null;
-      renderUpdateMessage();
-      els.updateInstall.disabled = false;
-      els.updateInstall.textContent = t("updater.install");
-      els.updateBanner.hidden = false;
-      els.updateInstall.onclick = async () => {
-        els.updateInstall.disabled = true;
-        els.updateInstall.textContent = t("updater.installing");
-        await onInstall();
-      };
-      els.updateDismiss.onclick = () => {
-        els.updateBanner.hidden = true;
-        currentUpdateVersion = null;
-        currentUpdateError = null;
-      };
-    },
-    showError: (cause) => {
-      currentUpdateError = cause;
-      renderUpdateMessage();
-      els.updateInstall.disabled = false;
-      els.updateInstall.textContent = t("updater.install");
-    },
-    hide: () => {
-      els.updateBanner.hidden = true;
-      currentUpdateVersion = null;
-      currentUpdateError = null;
-    },
-  },
+  ui: updaterUi,
+}).catch(() => {
+  // The internal try/catch wraps deps.check(), but synchronous throws
+  // from the ui callbacks (DOM not present, etc.) would otherwise escape
+  // as an unhandled rejection. The update path is best-effort; a failure
+  // here must not break the document workflow.
 });
