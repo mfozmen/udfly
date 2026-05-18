@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-19
+
+Major feature batch since 1.1.1: the chrome is redesigned around a Turkish-first identity, the app speaks Turkish by default (with an English toggle), exports as PDF, and silently checks for signed updates on every launch.
+
+### Added
+
+- **Auto-update via Tauri updater plugin**. Every launch silently checks GitHub Releases for a newer signed bundle. If one exists, a small banner appears below the topbar — *"Udfly X.Y.Z mevcut — Şimdi Güncelle [×]"* — and clicking the install button downloads, installs, and relaunches. Updates are minisign-signed; the running app refuses any bundle whose signature doesn't match the pubkey baked into `tauri.conf.json`. The check is best-effort: offline / GitHub-unreachable failures are silently swallowed.
+- **Export as PDF**. Third item in the existing Export dropdown alongside TXT and HTML. Clicking it rasterizes the document via `html2pdf.js` (jsPDF + html2canvas) into an A4 portrait PDF and triggers a direct download — no print dialog, no further user prompt. Image-based output captures exactly what the browser painted, so Turkish characters and the Times serif render without font embedding work. `pagebreak.mode: ['avoid-all', 'css', 'legacy']` keeps elements off page boundaries instead of slicing through text.
+- **UI internationalization with Turkish as the default**. Every chrome string lives in `src/i18n.js`'s `translations` table (TR + EN); `data-i18n` / `data-i18n-aria-label` attributes on the markup drive the swap. A compact `TR | EN` toggle sits at the right edge of the topbar; choice persists in `localStorage` under `udfly.locale`. First launch with no preference defaults to Turkish.
+- **Bilingual README**. `README.md` is now the Turkish version (GitHub's default preview); English moves to `README.en.md`. Both files carry a language switcher line under the logo. Translation register is formal/professional for the judicial audience; technical terms (NSIS, WebView2, AppImage, Tauri, parser) and UI labels stay verbatim.
+- **Branded application icons** (red `U` + paper plane) replacing the Tauri scaffold placeholders, regenerated into every platform size in `src-tauri/icons/` plus an in-app favicon and transparent-bg topbar mark.
+
+### Changed
+
+- **Chrome redesign**, document-first and restrained for the judicial audience. Warm paper-tint chrome (`#faf8f3` / `#f3f0e8`) instead of pure white so the white `.page` reads as the focal element. Public Sans (US federal government typeface) for chrome; JetBrains Mono only for the UYAP verification code. Single Turkish-flag-red accent (`#E30A17`) used in the brand mark, the drop overlay's "loud moment", the error rule, and focus rings — nowhere else. Dark mode reworked to warm near-black instead of slate-blue. Empty state, error state, drop overlay, statusbar, and buttons all retreated to deliberate compositions. Print stylesheet and the `.page` document surface left untouched.
+
+### Fixed
+
+- **Topbar buttons in `npm run dev` (browser mode)**. Open and Export → TXT/HTML threw `Cannot read properties of undefined (reading 'invoke')` through the Tauri plugins when no `__TAURI_INTERNALS__` was present. Open now falls back to a hidden `<input type="file" accept=".udf">`; Export to a Blob-backed `<a download>` click. Tauri-shell production paths are unchanged. Frontend iteration on `npm run dev` now works end-to-end without spinning up the Rust shell.
+- **`<input type="file">` cancel-event hang risk**. Pre-2023 browsers don't fire the `cancel` event, so the file picker promise would never settle if the user dismissed the OS dialog. A window `focus`-based backstop now resolves the promise as cancel after a short grace window.
+
 ## [1.1.1] - 2026-05-13
 
 Bringing the rendered output closer to the official UYAP/e-devlet viewer, after a side-by-side comparison turned up three layout bugs on a real `bilirkişi görevlendirme` document.
@@ -46,7 +67,8 @@ Initial public release. Udfly is a cross-platform Tauri 2 desktop app for openin
 - **File association** for `.udf` registered via `tauri.conf.json` (so OS-level "Open with" lists Udfly once installed).
 - **Cross-platform release CI**: `.github/workflows/release.yml` builds NSIS / DMG / AppImage / DEB / portable artifacts on tag push and uploads them to a draft GitHub Release.
 
-[unreleased]: https://github.com/mfozmen/udfly/compare/v1.1.1...HEAD
+[unreleased]: https://github.com/mfozmen/udfly/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/mfozmen/udfly/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/mfozmen/udfly/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/mfozmen/udfly/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mfozmen/udfly/releases/tag/v1.0.0
