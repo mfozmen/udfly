@@ -58,6 +58,12 @@ If you want to verify the binary instead of trusting the warning, build from sou
 
 The status bar shows the document's page count, file size, and the UYAP verification code (`uyapdogrulamakodu`) when present.
 
+## Auto-update
+
+Udfly silently checks for a new release on every launch. If one is available, a small banner appears just below the topbar: **"Udfly X.Y.Z is available — Update Now"**. Clicking the button downloads, installs, and relaunches the app. Closing with **×** dismisses the banner until the next launch's check.
+
+If you're offline or GitHub is unreachable, the check is silently skipped — your open document is unaffected. Updates are cryptographically signed; the app only accepts packages published through [GitHub Releases](https://github.com/mfozmen/udfly/releases) and signed with the expected key.
+
 ## Building from source
 
 ### Prerequisites

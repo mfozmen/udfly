@@ -20,3 +20,15 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# tauri::generate_context!() expands to code that touches serde_json
+# directly when plugins.updater is configured (it needs to deserialize
+# the pubkey/endpoints block at build time). Without serde_json in the
+# crate root the macro fails with E0433.
+serde_json = "1"
+# Desktop-only plugins. The updater fetches latest.json from GitHub
+# Releases and verifies its signature with the pubkey in tauri.conf.json
+# before any binary lands on disk. The process plugin's only use here is
+# `relaunch()` after a successful install.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"

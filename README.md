@@ -58,6 +58,12 @@ Bu sürümler **kod imzalı değildir**. Udfly'ı ilk açtığınızda işletim 
 
 Durum çubuğu belgenin sayfa sayısını, dosya boyutunu ve mevcutsa UYAP doğrulama kodunu (`uyapdogrulamakodu`) gösterir.
 
+## Otomatik güncelleme
+
+Udfly her açılışta yeni bir sürüm yayınlanmış mı diye sessizce kontrol eder. Yeni sürüm varsa topbar'ın hemen altında küçük bir bildirim çubuğu belirir: **"Udfly X.Y.Z mevcut — Şimdi Güncelle"**. Düğmeye tıkladığınızda güncelleme indirilir, kurulur ve uygulama yeniden başlatılır. **×** ile kapatırsanız çubuk kapanır ve bir sonraki açılışta tekrar kontrol edilir.
+
+İnternet yoksa veya GitHub'a ulaşılamıyorsa sessizce atlanır — açtığınız belge etkilenmez. Güncellemeler kriptografik olarak imzalıdır; uygulama yalnızca [GitHub Releases](https://github.com/mfozmen/udfly/releases) üzerinden yayınlanan ve doğru anahtarla imzalanmış paketleri kabul eder.
+
 ## Kaynaktan derleme
 
 ### Önkoşullar

@@ -41,6 +41,18 @@ C:*
 .env.local
 .env.*.local
 
+# Tauri updater signing keys
+# Public key (`*.key.pub`) is safe to share — it lives in tauri.conf.json
+# under plugins.updater.pubkey. But the *private* key (`*.key`) signs every
+# update binary and MUST stay out of version control. Keep both gitignored
+# as a defence-in-depth measure (pubkey is also fine in the repo, but
+# treating the whole keypair as untracked removes a class of mistakes).
+*.key
+*.key.pub
+udfly-updater.*
+# Local-only password material for signing the keypair above.
+.updater-key-password.local
+
 # Samples
 # IMPORTANT: samples/fixtures/ IS committed (sanitized test data).
 # samples/private/ is NEVER committed (contains real UDFs with personal data).

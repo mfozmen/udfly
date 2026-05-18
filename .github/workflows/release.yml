@@ -149,14 +149,28 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required by tauri-plugin-updater: tauri-action passes these to
+          # the bundler, which signs each platform artifact with the
+          # private key and writes its base64 signature into latest.json.
+          # The app verifies that signature against the pubkey baked into
+          # tauri.conf.json before any update binary touches disk, so a
+          # missing or wrong key here means no client can ever auto-update
+          # from this release. Generated via `npx tauri signer generate`;
+          # the public half lives in tauri.conf.json under
+          # plugins.updater.pubkey.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # tagName is required even with releaseId, because tauri-action's
           # uploadVersionJSON step uses it to construct the asset URLs in
           # the latest.json updater manifest. Without it, those URLs become
-          # `…/releases/download//artifact.tar.gz` and silently break any
-          # future tauri-plugin-updater integration.
+          # `…/releases/download//artifact.tar.gz` and silently break the
+          # tauri-plugin-updater client.
           tagName: ${{ github.ref_name }}
           releaseId: ${{ needs.create-release.outputs.release_id }}
+          # Publish latest.json so tauri-plugin-updater can read it from
+          # the per-platform endpoint baked into tauri.conf.json.
+          updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
 
       # Tauri 2's NSIS bundler doesn't expose a portable mode, but the

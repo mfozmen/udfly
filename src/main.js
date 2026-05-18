@@ -6,6 +6,8 @@ import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { setupExportMenu } from "./export.js";
 import { createFileLoader } from "./handoff.js";
 import { t, getLocale, setLocale, applyTranslations } from "./i18n.js";
+import { checkAndPromptForUpdate } from "./updater.js";
+import { createUpdaterUi } from "./updater-ui.js";
 
 const els = {
   filename: document.getElementById("filename"),
@@ -27,7 +29,17 @@ const els = {
   sizeInfo: document.getElementById("size-info"),
   verificationInfo: document.getElementById("verification-info"),
   langToggle: document.getElementById("lang-toggle"),
+  updateBanner: document.getElementById("update-banner"),
+  updateBannerMessage: document.getElementById("update-banner-message"),
+  updateInstall: document.getElementById("update-install"),
+  updateDismiss: document.getElementById("update-dismiss"),
 };
+
+// Updater UI adapter — owns the banner DOM wiring and the runtime-
+// interpolated headline (which the static data-i18n sweep can't render).
+// Created once at boot; refreshLocale() calls into its refreshLocale()
+// hook so the version message follows the active language.
+const updaterUi = createUpdaterUi(els);
 
 // Apply the persisted (or default 'tr') locale to every [data-i18n] and
 // [data-i18n-aria-label] node on load. The HTML ships with Turkish text
@@ -41,6 +53,9 @@ function refreshLocale() {
   // Reflect the active locale on the toggle so CSS can highlight the
   // current selection.
   els.langToggle.setAttribute("data-locale", locale);
+  // Banner's runtime-interpolated headline lives outside the data-i18n
+  // sweep; the adapter knows how to re-render it.
+  updaterUi.refreshLocale();
 }
 refreshLocale();
 
@@ -234,3 +249,31 @@ window.addEventListener("keydown", (e) => {
 });
 
 showState("empty");
+
+// Auto-update: fire once at boot. updater.js short-circuits when the
+// Tauri runtime isn't available, so this is a no-op in plain Vite dev.
+// In production it asks GitHub Releases via tauri-plugin-updater and,
+// if a newer signed bundle exists, surfaces the banner. The Tauri
+// plugins are dynamic-imported so the bundle stays lean when the check
+// path never runs.
+checkAndPromptForUpdate({
+  deps: {
+    isTauriAvailable: () =>
+      typeof window !== "undefined" &&
+      typeof window.__TAURI_INTERNALS__ !== "undefined",
+    check: async () => {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      return check();
+    },
+    relaunch: async () => {
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    },
+  },
+  ui: updaterUi,
+}).catch(() => {
+  // The internal try/catch wraps deps.check(), but synchronous throws
+  // from the ui callbacks (DOM not present, etc.) would otherwise escape
+  // as an unhandled rejection. The update path is best-effort; a failure
+  // here must not break the document workflow.
+});

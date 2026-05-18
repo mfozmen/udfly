@@ -27,6 +27,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "shortDescription": "A fast, portable viewer for UYAP .udf documents",
     "longDescription": "A fast, portable viewer for UYAP .udf documents",
     "icon": [
@@ -46,5 +47,13 @@
         "role": "Viewer"
       }
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQxQjJCMzRFREM4MkY3OEEKUldTSzk0TGNUck95UVdnK0p5QW1XY2RHd1RONC9YV2F5K1Z6V2QvSkdmalVKL0htSTFobFp5TXoK",
+      "endpoints": [
+        "https://github.com/mfozmen/udfly/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
