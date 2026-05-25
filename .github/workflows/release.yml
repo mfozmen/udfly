@@ -93,6 +93,17 @@ jobs:
     needs: create-release
     strategy:
       fail-fast: false
+      # Run the platform legs one at a time. tauri-action's updater step
+      # uploads latest.json by reading the existing asset, merging this
+      # platform's signature in, and re-uploading (delete + recreate).
+      # Run in parallel, the three legs race that single shared asset: one
+      # job deletes the asset another is mid-update on, which surfaces as
+      # `Not Found - update-a-release-asset`, and the surviving latest.json
+      # ends up with only whichever leg wrote last (v1.2.0's first attempt
+      # left a Windows-only manifest and failed the Linux leg outright).
+      # Serializing makes the read-merge-write safe; the cost is a longer
+      # wall-clock release (~3x), acceptable for an infrequent job.
+      max-parallel: 1
       matrix:
         include:
           - platform: macos-latest
