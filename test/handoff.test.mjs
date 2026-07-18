@@ -88,6 +88,82 @@ test("defaultPickFileViaBrowser resolves null when window regains focus without 
   assert.equal(result, null);
 });
 
+// --- Tauri path + onPathOpened ---------------------------------------------
+
+// The Open Recent menu needs to know which host paths were actually opened.
+// Only path-driven loads (Tauri dialog, OS handoff) carry a path — browser
+// File objects don't — so the notification seam lives in loadFromPath.
+
+test("pickAndOpen via Tauri reports the opened path through onPathOpened", async () => {
+  const openedPaths = [];
+  const loadBytesCalls = [];
+  const { pickAndOpen } = createFileLoader({
+    loadBytes: async (filename, sizeBytes, buffer) =>
+      loadBytesCalls.push({ filename, sizeBytes, byteLength: buffer.byteLength }),
+    showError: () => {},
+    isTauriAvailable: () => true,
+    onPathOpened: (path) => openedPaths.push(path),
+    openDialog: async () => "C:\\docs\\dilekce.udf",
+    invoke: async (cmd) => {
+      if (cmd === "read_file_bytes") return [1, 2, 3];
+      return null; // take_pending_path: queue empty
+    },
+  });
+  await pickAndOpen();
+  await flush();
+  assert.equal(loadBytesCalls.length, 1);
+  assert.equal(loadBytesCalls[0].filename, "dilekce.udf");
+  assert.equal(loadBytesCalls[0].byteLength, 3);
+  assert.deepEqual(openedPaths, ["C:\\docs\\dilekce.udf"]);
+});
+
+test("onPathOpened is not called when the path can't be read", async () => {
+  const openedPaths = [];
+  const showErrorCalls = [];
+  const { pickAndOpen } = createFileLoader({
+    loadBytes: async () => {},
+    showError: (msg) => showErrorCalls.push(msg),
+    isTauriAvailable: () => true,
+    onPathOpened: (path) => openedPaths.push(path),
+    openDialog: async () => "C:\\docs\\gone.udf",
+    invoke: async (cmd) => {
+      if (cmd === "read_file_bytes") throw "ENOENT";
+      return null;
+    },
+  });
+  await pickAndOpen();
+  await flush();
+  assert.equal(showErrorCalls.length, 1);
+  assert.deepEqual(openedPaths, [], "unreadable paths don't enter the recent list");
+});
+
+test("openPath loads a caller-supplied path through the same pipeline", async () => {
+  // Open Recent menu clicks hand a stored path straight to the loader; it
+  // must flow through the same in-flight guard and onPathOpened reporting
+  // as dialog picks.
+  const openedPaths = [];
+  const loadBytesCalls = [];
+  const { openPath } = createFileLoader({
+    loadBytes: async (filename, sizeBytes, buffer) =>
+      loadBytesCalls.push({ filename, byteLength: buffer.byteLength }),
+    showError: () => {},
+    isTauriAvailable: () => true,
+    onPathOpened: (path) => openedPaths.push(path),
+    openDialog: async () => {
+      throw new Error("dialog must not open for a recent-file click");
+    },
+    invoke: async (cmd) => {
+      if (cmd === "read_file_bytes") return [9, 9];
+      return null;
+    },
+  });
+  await openPath("C:\\docs\\recent.udf");
+  await flush();
+  assert.equal(loadBytesCalls.length, 1);
+  assert.equal(loadBytesCalls[0].filename, "recent.udf");
+  assert.deepEqual(openedPaths, ["C:\\docs\\recent.udf"]);
+});
+
 test("pickAndOpen serializes concurrent calls in browser mode too", async () => {
   // The in-flight guard prevents a second pickAndOpen() from running until
   // the first finishes — the same invariant that protects the Tauri path
