@@ -42,6 +42,15 @@ fn write_file_text(path: String, contents: String) -> Result<(), String> {
     std::fs::write(&path, contents).map_err(|e| e.to_string())
 }
 
+// Binary sibling of write_file_text, added for the PDF export: the payload
+// arrives as a JSON number array over IPC (fine at the ~1 MB scale of a
+// rasterized A4 document) and lands on disk verbatim. Same dialog-bounded
+// authority model as the text variant.
+#[tauri::command]
+fn write_file_bytes(path: String, contents: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, contents).map_err(|e| e.to_string())
+}
+
 // Pop the next queued path the OS has handed us. Frontend calls this on
 // startup (so a Windows / Linux argv path is consumed) and on each
 // udfly://path-available event (so macOS Apple-Event paths that
@@ -73,6 +82,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_file_bytes,
             write_file_text,
+            write_file_bytes,
             take_pending_path
         ])
         .build(tauri::generate_context!())
@@ -105,7 +115,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::write_file_text;
+    use super::{write_file_bytes, write_file_text};
 
     // Pins the contract write_file_text makes: bytes are written verbatim —
     // UTF-8 encoded, with no line-ending translation. The non-ASCII chars
@@ -123,6 +133,32 @@ mod tests {
         let read_back = std::fs::read(&path).expect("temp file should be readable");
         std::fs::remove_file(&path).ok();
         assert_eq!(read_back, body.as_bytes());
+    }
+
+    // The PDF export sends raw PDF bytes (not text) — they must land on disk
+    // verbatim, with no encoding or newline translation. The payload includes
+    // a %PDF header plus bytes >0x7F to make any UTF-8 round-trip visible.
+    #[test]
+    fn write_file_bytes_writes_bytes_verbatim() {
+        let path = std::env::temp_dir()
+            .join(format!("udfly-write-bytes-test-{}.pdf", std::process::id()));
+        let body: Vec<u8> = vec![0x25, 0x50, 0x44, 0x46, 0x2d, 0x00, 0xff, 0x0a, 0x0d];
+        write_file_bytes(path.to_string_lossy().into_owned(), body.clone())
+            .expect("write should succeed for a writable temp path");
+        let read_back = std::fs::read(&path).expect("temp file should be readable");
+        std::fs::remove_file(&path).ok();
+        assert_eq!(read_back, body);
+    }
+
+    #[test]
+    fn write_file_bytes_reports_io_errors_as_strings() {
+        let bad = std::env::temp_dir()
+            .join("udfly-no-such-dir")
+            .join("nested")
+            .join("out.pdf");
+        let err = write_file_bytes(bad.to_string_lossy().into_owned(), vec![1, 2, 3])
+            .expect_err("write to a missing directory should fail");
+        assert!(!err.is_empty(), "the IO error should be surfaced as a non-empty string");
     }
 
     #[test]
