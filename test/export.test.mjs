@@ -419,6 +419,32 @@ test("exportAs browser-save is a no-op when no document is loaded", async (t) =>
 
 // --- Native-menu entry points ----------------------------------------------
 
+test("setupExportMenu runs without dropdown elements (native-menu-only chrome)", async (t) => {
+  // With the topbar gone, main.js mounts the exporter with just the page
+  // element — no trigger button, no dropdown list. Setup must not touch
+  // the absent elements, and close() must be a safe no-op.
+  const page = document.createElement("article");
+  page.id = "page";
+  document.body.append(page);
+  const invokeCalls = [];
+  t.after(() => page.remove());
+  const api = setupExportMenu({
+    els: { page },
+    getDocument: () => ({
+      parsed: { text: "menu only", pages: 1, properties: {}, elements: [] },
+      filename: "dilekce.udf",
+    }),
+    saveDialog: async () => "/out/dilekce.txt",
+    invoke: async (cmd, args) => invokeCalls.push([cmd, args]),
+    isTauriAvailable: () => true,
+  });
+  api.close();
+  await api.exportAs("txt");
+  assert.deepEqual(invokeCalls, [
+    ["write_file_text", { path: "/out/dilekce.txt", contents: "menu only" }],
+  ]);
+});
+
 // The native File menu triggers the same exports as the topbar dropdown;
 // setupExportMenu exposes them so main.js can wire menu items without
 // synthesizing DOM clicks.
