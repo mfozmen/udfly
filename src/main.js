@@ -204,6 +204,7 @@ const appMenu = setupAppMenu({
     exportPdf: () => exportMenu.exportPdf(),
     print: () => window.print(),
     checkUpdates: () => runUpdateCheck({ interactive: true }),
+    about: () => showAbout(),
   },
   isDocumentLoaded: () => !!currentDoc,
 });
@@ -271,6 +272,24 @@ window.addEventListener("keydown", (e) => {
     window.print();
   }
 });
+
+// About box: native message dialog with the running version. Only
+// reachable from the native menu, which itself only exists in the Tauri
+// shell, so the Tauri imports here can't fire in plain-browser dev. The
+// version comes from the runtime (tauri.conf.json) rather than a
+// build-time constant, so it can never drift from the installed app.
+async function showAbout() {
+  try {
+    const [{ getVersion }, { message }] = await Promise.all([
+      import("@tauri-apps/api/app"),
+      import("@tauri-apps/plugin-dialog"),
+    ]);
+    const version = await getVersion();
+    await message(t("about.body", { version }), { title: t("about.title") });
+  } catch (cause) {
+    console.error("about dialog failed:", cause);
+  }
+}
 
 showState("empty");
 

@@ -44,6 +44,22 @@ test("every key present in tr is also present in en (and vice versa)", () => {
   );
 });
 
+// --- about strings (Dosya > Hakkında) ---
+
+test("about strings exist in both locales and interpolate the version", () => {
+  for (const locale of ["tr", "en"]) {
+    assert.ok(translations[locale]["menu.about"], `menu.about in ${locale}`);
+    assert.ok(translations[locale]["about.title"], `about.title in ${locale}`);
+    const body = t("about.body", locale).split("{version}").join("1.3.0");
+    assert.ok(body.includes("Udfly"), `about.body names the app in ${locale}`);
+    assert.ok(body.includes("1.3.0"), `about.body carries the version in ${locale}`);
+    assert.ok(
+      body.includes("github.com/mfozmen/udfly"),
+      `about.body links the repo in ${locale}`,
+    );
+  }
+});
+
 // --- t(key, locale) ---
 
 test("t returns the Turkish string for a known key by default", () => {

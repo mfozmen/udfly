@@ -34,6 +34,10 @@ export const translations = {
     "menu.openRecent.clear": "Listeyi Temizle",
     "menu.quit": "Çıkış",
     "menu.checkUpdates": "Güncellemeleri Denetle",
+    "menu.about": "Hakkında",
+    "about.title": "Udfly Hakkında",
+    "about.body":
+      "Udfly {version}\n\nUYAP .udf belgeleri için hızlı, taşınabilir görüntüleyici.\n\ngithub.com/mfozmen/udfly\nMIT lisansı ile dağıtılır.",
 
     // --- empty / error / drop ---
     "empty.title": "Başlamak için bir .udf dosyası bırakın",
@@ -85,6 +89,10 @@ export const translations = {
     "menu.openRecent.clear": "Clear List",
     "menu.quit": "Exit",
     "menu.checkUpdates": "Check for Updates",
+    "menu.about": "About",
+    "about.title": "About Udfly",
+    "about.body":
+      "Udfly {version}\n\nA fast, portable viewer for UYAP .udf documents.\n\ngithub.com/mfozmen/udfly\nDistributed under the MIT license.",
 
     // --- empty / error / drop ---
     "empty.title": "Drop a .udf file to begin",
