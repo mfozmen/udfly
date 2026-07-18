@@ -12,14 +12,6 @@ import { checkAndPromptForUpdate } from "./updater.js";
 import { createUpdaterUi } from "./updater-ui.js";
 
 const els = {
-  filename: document.getElementById("filename"),
-  openBtn: document.getElementById("open-btn"),
-  printBtn: document.getElementById("print-btn"),
-  exportBtn: document.getElementById("export-btn"),
-  exportMenu: document.getElementById("export-menu"),
-  exportTxt: document.getElementById("export-txt"),
-  exportHtml: document.getElementById("export-html"),
-  exportPdf: document.getElementById("export-pdf"),
   emptyState: document.getElementById("empty-state"),
   pageView: document.getElementById("page-view"),
   page: document.getElementById("page"),
@@ -67,21 +59,20 @@ refreshLocale();
 // a stale one from a load that's been superseded.
 let currentDoc = null;
 
+// The export dropdown chrome is gone with the topbar — the exporter only
+// needs the page element; the native File menu is its sole trigger.
 const exportMenu = setupExportMenu({
-  els,
+  els: { page: document.getElementById("page") },
   getDocument: () => currentDoc,
   saveDialog,
   invoke,
 });
 
-// Drop the loaded document and disable the actions that depend on it. Called
-// at the start of every load (before the async parse) and on error, so a
-// click on Export/Print can never act on content that isn't on screen.
+// Drop the loaded document and disable the menu actions that depend on it.
+// Called at the start of every load (before the async parse) and on error,
+// so Export/Print can never act on content that isn't on screen.
 function clearDocument() {
   currentDoc = null;
-  els.printBtn.disabled = true;
-  els.exportBtn.disabled = true;
-  exportMenu.close();
   appMenu.refresh();
 }
 
@@ -91,8 +82,20 @@ function showState(name) {
   els.errorState.hidden = name !== "error";
 }
 
+// With the topbar gone the filename lives where every native document
+// viewer puts it: the OS window title. document.title covers plain-browser
+// dev; the native titlebar doesn't track it, so the Tauri path also sets
+// the window title explicitly (fire-and-forget — a title that fails to
+// update must not break the load).
 function setFilename(name) {
-  els.filename.textContent = name || "";
+  const title = name ? `${name} — Udfly` : "Udfly";
+  document.title = title;
+  if (typeof window.__TAURI_INTERNALS__ !== "undefined") {
+    (async () => {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().setTitle(title);
+    })().catch(() => {});
+  }
 }
 
 function setStatus({ pages, sizeBytes, verificationCode }) {
@@ -126,7 +129,7 @@ function paintPage(html) {
 }
 
 function showError(message) {
-  // Reset chrome to "no document loaded" so the topbar filename and status
+  // Reset chrome to "no document loaded" so the window title and status
   // bar can't contradict the error overlay (e.g., previous document's name
   // sticking around after a non-.udf drop).
   setFilename("");
@@ -158,8 +161,6 @@ async function loadBytes(filename, sizeBytes, buffer) {
     sizeBytes,
     verificationCode: parsed.verificationCode,
   });
-  els.printBtn.disabled = false;
-  els.exportBtn.disabled = false;
   showState("page");
   appMenu.refresh();
 }
@@ -246,14 +247,6 @@ window.addEventListener("drop", async (e) => {
   await openFile(file);
 });
 
-els.openBtn.addEventListener("click", () => {
-  pickAndOpen();
-});
-
-els.printBtn.addEventListener("click", () => {
-  if (!els.printBtn.disabled) window.print();
-});
-
 els.errorRetry.addEventListener("click", () => {
   setFilename("");
   showState("empty");
@@ -273,7 +266,7 @@ window.addEventListener("keydown", (e) => {
   if (key === "o") {
     e.preventDefault();
     pickAndOpen();
-  } else if (key === "p" && !els.printBtn.disabled) {
+  } else if (key === "p" && currentDoc) {
     e.preventDefault();
     window.print();
   }

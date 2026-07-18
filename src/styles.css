@@ -58,7 +58,6 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas,
     monospace;
 
-  --topbar-h: 48px;
   --statusbar-h: 32px;
   --page-max-w: 800px;
   --page-pad-x: 60px;
@@ -120,95 +119,21 @@ body {
   color: var(--color-chrome-fg);
   background-color: var(--color-bg);
   display: grid;
-  grid-template-rows: var(--topbar-h) 1fr var(--statusbar-h);
+  grid-template-rows: 1fr var(--statusbar-h);
   /* Position context for the absolutely-positioned .update-banner that
-     anchors itself just below the topbar without disturbing the grid. */
+     anchors itself to the top edge without disturbing the grid. */
   position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* ===== Topbar =====
-   Three-column grid: brand (icon + wordmark) | filename | actions.
-   The wordmark is lowercase 'udfly' — matches the repo brand and reads
-   warmer than 'Udfly'. The brand mark is the app icon at 22px; on light
-   bg we show the light variant, on dark the dark variant. */
-.topbar {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 24px;
-  padding: 0 16px;
-  background-color: var(--color-chrome-bg);
-  border-bottom: 1px solid var(--color-border);
-  user-select: none;
-}
-
-.topbar__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Transparent-background mark glyph (red U + paper plane). The same mark
-   reads on light and dark chrome because it's a saturated red on alpha. */
-.topbar__mark {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-.topbar__title {
-  font-size: 13.5px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  color: var(--color-chrome-fg);
-  font-feature-settings: "ss01", "ss02";
-}
-
-.topbar__filename {
-  font-size: 12.5px;
-  font-weight: 450;
-  color: var(--color-chrome-muted);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  text-align: center;
-  /* Grid items default to min-width: auto, which prevents text-overflow
-     from kicking in until layout overflows the parent. Forcing 0 lets the
-     ellipsis activate as soon as the filename exceeds its column. */
-  min-width: 0;
-}
-
-.topbar__actions {
-  display: flex;
-  gap: 2px;
-}
-
-/* Subtle vertical separator before the Print action so it reads as a
-   primary action distinct from Open/Export. */
-.topbar__actions .btn--separator-before {
-  margin-left: 8px;
-  position: relative;
-}
-.topbar__actions .btn--separator-before::before {
-  content: "";
-  position: absolute;
-  left: -5px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 14px;
-  background-color: var(--color-border-strong);
-}
-
-/* Language toggle — a compact 'TR | EN' pair sitting at the right edge
-   of the topbar actions. Visually quieter than the action buttons: no
-   hover fill, just contrast between the active and inactive sides.
-   data-locale on the button is updated by main.js whenever the locale
-   changes; the CSS reads it to pick which span gets full foreground
-   colour vs. the muted treatment. */
+/* ===== Language toggle =====
+   A compact 'TR | EN' pair sitting at the right edge of the statusbar.
+   Visually quiet: no hover fill, just contrast between the active and
+   inactive sides. data-locale on the button is updated by main.js
+   whenever the locale changes; the CSS reads it to pick which span gets
+   full foreground colour vs. the muted treatment. */
 .lang-toggle {
   display: inline-flex;
   align-items: center;
@@ -311,63 +236,6 @@ body {
 .btn:disabled {
   color: var(--color-chrome-subtle);
   cursor: default;
-}
-
-/* Export dropdown */
-.topbar__export {
-  position: relative;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background-color: var(--color-chrome-bg);
-  border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
-  list-style: none;
-  padding: 4px;
-  min-width: 168px;
-  z-index: 10;
-}
-@media (prefers-color-scheme: dark) {
-  .dropdown-menu {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
-  }
-}
-
-.dropdown-menu[hidden] {
-  display: none;
-}
-
-.dropdown-menu__item {
-  display: block;
-  width: 100%;
-  padding: 7px 12px;
-  text-align: left;
-  background: transparent;
-  border: none;
-  border-radius: 5px;
-  color: var(--color-chrome-fg);
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 450;
-  cursor: pointer;
-}
-
-.dropdown-menu__item:hover:not(:disabled) {
-  background-color: rgba(26, 24, 22, 0.06);
-}
-@media (prefers-color-scheme: dark) {
-  .dropdown-menu__item:hover:not(:disabled) {
-    background-color: rgba(237, 233, 224, 0.06);
-  }
-}
-
-.dropdown-menu__item:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
 }
 
 /* ===== Content area & state regions ===== */
@@ -714,15 +582,21 @@ body {
   display: inline-block;
 }
 
+/* The TR|EN toggle rides the statusbar's right edge, away from the
+   document-property readouts. */
+.statusbar .lang-toggle {
+  margin-left: auto;
+}
+
 /* ===== Update banner =====
-   A discreet pill announcing 'Udfly X.Y.Z mevcut' just below the
-   topbar. Anchored absolute against the body (not part of the body
+   A discreet pill announcing 'Udfly X.Y.Z mevcut' along the window's
+   top edge. Anchored absolute against the body (not part of the body
    grid, doesn't push content down) so the document stays where it
    was. Dismissible — hides until the next launch fetches a check
    again. */
 .update-banner {
   position: absolute;
-  top: var(--topbar-h);
+  top: 0;
   left: 0;
   right: 0;
   z-index: 3;
@@ -834,7 +708,6 @@ body {
     display: block;
     background: #fff;
   }
-  .topbar,
   .statusbar,
   .dropoverlay,
   .update-banner,

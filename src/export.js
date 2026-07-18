@@ -148,42 +148,49 @@ export function setupExportMenu({
   generatePdf = defaultGeneratePdf,
   generatePdfBytes = defaultGeneratePdfBytes,
 }) {
-  function open() {
-    els.exportMenu.hidden = false;
-    els.exportBtn.setAttribute("aria-expanded", "true");
-  }
+  // The dropdown chrome is optional: with the native File menu carrying
+  // the export items, main.js mounts this module with just the page
+  // element. All DOM wiring below is gated on the trigger/menu pair being
+  // present; the export functions themselves never touch them.
+  const hasDropdown = !!(els.exportBtn && els.exportMenu);
+
   function close() {
+    if (!hasDropdown) return;
     els.exportMenu.hidden = true;
     els.exportBtn.setAttribute("aria-expanded", "false");
   }
-  function toggle() {
-    if (els.exportMenu.hidden) open();
-    else close();
+
+  if (hasDropdown) {
+    const open = () => {
+      els.exportMenu.hidden = false;
+      els.exportBtn.setAttribute("aria-expanded", "true");
+    };
+
+    els.exportBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (els.exportBtn.disabled) return;
+      if (els.exportMenu.hidden) open();
+      else close();
+    });
+
+    // Click anywhere outside the menu (and not on the trigger, which has
+    // its own toggle handler) closes it.
+    document.addEventListener("click", (e) => {
+      if (els.exportMenu.hidden) return;
+      if (!els.exportMenu.contains(e.target) && e.target !== els.exportBtn) {
+        close();
+      }
+    });
+
+    // Escape closes the menu and returns focus to the trigger so keyboard
+    // users don't get stranded.
+    els.exportMenu.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        close();
+        els.exportBtn.focus();
+      }
+    });
   }
-
-  els.exportBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (els.exportBtn.disabled) return;
-    toggle();
-  });
-
-  // Click anywhere outside the menu (and not on the trigger, which has its
-  // own toggle handler) closes it.
-  document.addEventListener("click", (e) => {
-    if (els.exportMenu.hidden) return;
-    if (!els.exportMenu.contains(e.target) && e.target !== els.exportBtn) {
-      close();
-    }
-  });
-
-  // Escape closes the menu and returns focus to the trigger so keyboard
-  // users don't get stranded.
-  els.exportMenu.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      close();
-      els.exportBtn.focus();
-    }
-  });
 
   async function exportAs(format) {
     const doc = getDocument();
@@ -288,18 +295,20 @@ export function setupExportMenu({
     }
   }
 
-  els.exportTxt.addEventListener("click", () => {
-    close();
-    exportAs("txt");
-  });
-  els.exportHtml.addEventListener("click", () => {
-    close();
-    exportAs("html");
-  });
-  els.exportPdf.addEventListener("click", () => {
-    close();
-    exportPdf();
-  });
+  if (hasDropdown) {
+    els.exportTxt.addEventListener("click", () => {
+      close();
+      exportAs("txt");
+    });
+    els.exportHtml.addEventListener("click", () => {
+      close();
+      exportAs("html");
+    });
+    els.exportPdf.addEventListener("click", () => {
+      close();
+      exportPdf();
+    });
+  }
 
   return { close, exportAs, exportPdf };
 }

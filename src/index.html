@@ -12,104 +12,6 @@
   </head>
 
   <body>
-    <header class="topbar">
-      <div class="topbar__brand">
-        <img
-          class="topbar__mark"
-          src="./mark-only.png"
-          alt=""
-          aria-hidden="true"
-          width="22"
-          height="22"
-        />
-        <h1 class="topbar__title" translate="no">udfly</h1>
-      </div>
-      <div class="topbar__filename" id="filename" aria-live="polite"></div>
-      <div class="topbar__actions">
-        <button
-          class="btn"
-          id="open-btn"
-          type="button"
-          aria-keyshortcuts="Control+O"
-          data-i18n="topbar.open"
-          data-i18n-aria-label="topbar.open.aria"
-        >
-          Aç
-        </button>
-        <div class="topbar__export">
-          <button
-            class="btn"
-            id="export-btn"
-            type="button"
-            disabled
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-controls="export-menu"
-            data-i18n="topbar.export"
-          >
-            Dışa Aktar
-          </button>
-          <ul class="dropdown-menu" id="export-menu" role="menu" hidden>
-            <li role="none">
-              <button
-                class="dropdown-menu__item"
-                id="export-txt"
-                type="button"
-                role="menuitem"
-                data-i18n="topbar.export.txt"
-              >
-                TXT Olarak Dışa Aktar
-              </button>
-            </li>
-            <li role="none">
-              <button
-                class="dropdown-menu__item"
-                id="export-html"
-                type="button"
-                role="menuitem"
-                data-i18n="topbar.export.html"
-              >
-                HTML Olarak Dışa Aktar
-              </button>
-            </li>
-            <li role="none">
-              <button
-                class="dropdown-menu__item"
-                id="export-pdf"
-                type="button"
-                role="menuitem"
-                data-i18n="topbar.export.pdf"
-              >
-                PDF Olarak Dışa Aktar
-              </button>
-            </li>
-          </ul>
-        </div>
-        <button
-          class="btn btn--separator-before"
-          id="print-btn"
-          type="button"
-          disabled
-          aria-keyshortcuts="Control+P"
-          data-i18n="topbar.print"
-          data-i18n-aria-label="topbar.print.aria"
-        >
-          Yazdır
-        </button>
-        <button
-          class="lang-toggle btn--separator-before"
-          id="lang-toggle"
-          type="button"
-          data-i18n-aria-label="topbar.lang.toggle.aria"
-          translate="no"
-        >
-          <span class="lang-toggle__option" data-locale="tr">TR</span>
-          <span class="lang-toggle__sep" aria-hidden="true">|</span>
-          <span class="lang-toggle__option" data-locale="en">EN</span>
-        </button>
-      </div>
-    </header>
-
     <aside
       class="update-banner"
       id="update-banner"
@@ -215,6 +117,17 @@
         <span class="statusbar__label" data-i18n="statusbar.verification">Doğrulama</span>
         <span class="statusbar__value statusbar__value--mono" id="verification-info">—</span>
       </div>
+      <button
+        class="lang-toggle"
+        id="lang-toggle"
+        type="button"
+        data-i18n-aria-label="topbar.lang.toggle.aria"
+        translate="no"
+      >
+        <span class="lang-toggle__option" data-locale="tr">TR</span>
+        <span class="lang-toggle__sep" aria-hidden="true">|</span>
+        <span class="lang-toggle__option" data-locale="en">EN</span>
+      </button>
     </footer>
   </body>
 </html>
