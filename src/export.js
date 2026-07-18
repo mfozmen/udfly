@@ -254,6 +254,21 @@ export function setupExportMenu({
   // Rust write flow TXT/HTML use. Dialog first, rasterize second: the
   // dialog is instant while html2canvas can take seconds, and a cancel
   // should cost nothing.
+  // html2canvas photographs the element as-is, so .page's screen chrome
+  // (border, shadow, radius, padding) would be inked into the PDF — a
+  // visible thin box outline — and the padding height can spill a mostly
+  // blank extra page. The .page--exporting class applies print-clean CSS
+  // for exactly the rasterization window; the finally guarantees the
+  // screen styling comes back even when html2pdf throws.
+  async function withExportStyling(fn) {
+    els.page.classList.add("page--exporting");
+    try {
+      return await fn();
+    } finally {
+      els.page.classList.remove("page--exporting");
+    }
+  }
+
   async function exportPdf() {
     const doc = getDocument();
     if (!doc || !doc.parsed) return;
@@ -261,7 +276,7 @@ export function setupExportMenu({
 
     if (!isTauriAvailable()) {
       try {
-        await generatePdf(els.page, filename);
+        await withExportStyling(() => generatePdf(els.page, filename));
       } catch (cause) {
         window.alert(t("alert.pdfExportFailed", { cause: cause.message || cause }));
       }
@@ -281,7 +296,7 @@ export function setupExportMenu({
     if (!path) return; // user canceled the save picker
     let bytes;
     try {
-      bytes = await generatePdfBytes(els.page, filename);
+      bytes = await withExportStyling(() => generatePdfBytes(els.page, filename));
     } catch (cause) {
       window.alert(t("alert.pdfExportFailed", { cause: cause.message || cause }));
       return;
