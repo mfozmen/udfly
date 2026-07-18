@@ -20,13 +20,11 @@ export const translations = {
   tr: {
     // --- topbar ---
     "topbar.open": "Aç",
-    "topbar.open.aria": "Aç (Ctrl+O)",
     "topbar.export": "Dışa Aktar",
     "topbar.export.txt": "TXT Olarak Dışa Aktar",
     "topbar.export.html": "HTML Olarak Dışa Aktar",
     "topbar.export.pdf": "PDF Olarak Dışa Aktar",
     "topbar.print": "Yazdır",
-    "topbar.print.aria": "Yazdır (Ctrl+P)",
     "topbar.lang.toggle.aria": "Dili değiştir (şu an Türkçe)",
 
     // --- native window menu ---
@@ -73,13 +71,11 @@ export const translations = {
   en: {
     // --- topbar ---
     "topbar.open": "Open",
-    "topbar.open.aria": "Open (Ctrl+O)",
     "topbar.export": "Export",
     "topbar.export.txt": "Export as TXT",
     "topbar.export.html": "Export as HTML",
     "topbar.export.pdf": "Export as PDF",
     "topbar.print": "Print",
-    "topbar.print.aria": "Print (Ctrl+P)",
     "topbar.lang.toggle.aria": "Switch language (currently English)",
 
     // --- native window menu ---
