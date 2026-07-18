@@ -136,7 +136,8 @@ export function withPlatformLineEndings(text, userAgent) {
 // serializes the document that's actually on screen.
 //
 // Returns { close } so callers (e.g. the error-state reset in main.js) can
-// dismiss the menu programmatically.
+// dismiss the menu programmatically, plus { exportAs, exportPdf } so the
+// native File menu can trigger the same exports as the dropdown items.
 export function setupExportMenu({
   els,
   getDocument,
@@ -300,5 +301,5 @@ export function setupExportMenu({
     exportPdf();
   });
 
-  return { close };
+  return { close, exportAs, exportPdf };
 }

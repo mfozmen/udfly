@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as tauriOpenDialog } from "@tauri-apps/plugin-dialog";
 import { basename } from "./path.js";
 import { t } from "./i18n.js";
 
@@ -64,17 +64,22 @@ export function defaultPickFileViaBrowser() {
 // loadBytes; one in-flight guard serializes them so two loads never race
 // onto the same DOM.
 //
-// loadBytes and showError are injected by main.js — this module reaches the
-// rest (read_file_bytes / take_pending_path commands, the path-available
-// event, the OS file picker) through the Tauri bindings directly. Calling
-// createFileLoader also starts the handoff drain (and the listener for later
-// arrivals) as a documented side effect; it returns { pickAndOpen } for the
-// UI to wire to the Open button and Ctrl+O.
+// loadBytes and showError are injected by main.js; invoke and openDialog
+// default to the real Tauri bindings but are injectable so Node tests can
+// drive the Tauri path without the runtime. onPathOpened fires with the
+// host path after every successful path-driven read — the seam the Open
+// Recent menu records from. Calling createFileLoader also starts the
+// handoff drain (and the listener for later arrivals) as a documented side
+// effect; it returns { pickAndOpen, openPath } for the UI to wire to the
+// Open button / Ctrl+O and the recent-files menu.
 export function createFileLoader({
   loadBytes,
   showError,
   isTauriAvailable = defaultIsTauriAvailable,
   pickFileViaBrowser = defaultPickFileViaBrowser,
+  onPathOpened = () => {},
+  invoke = tauriInvoke,
+  openDialog = tauriOpenDialog,
 }) {
   // loadInFlight serializes every path that ends in loadBytes — the picker
   // and the handoff drain. drainPending records "a drain was wanted while
@@ -98,6 +103,10 @@ export function createFileLoader({
     }
     const buffer = new Uint8Array(bytes).buffer;
     await loadBytes(filename, buffer.byteLength, buffer);
+    // Reported after a successful read (not parse): a readable file is
+    // worth remembering even if this parse failed, and read failures
+    // (deleted/moved files) stay out of the recent list.
+    onPathOpened(path);
   }
 
   async function pickAndOpenViaTauri() {
@@ -146,6 +155,23 @@ export function createFileLoader({
       } else {
         await pickAndOpenViaBrowser();
       }
+    } finally {
+      loadInFlight = false;
+      if (drainPending) {
+        drainPending = false;
+        drainPendingPath();
+      }
+    }
+  }
+
+  // Recent-menu clicks: load a known host path through the same in-flight
+  // guard the picker uses, so a recent click during a pending load is
+  // dropped rather than racing onto the DOM.
+  async function openPath(path) {
+    if (loadInFlight) return;
+    loadInFlight = true;
+    try {
+      await loadFromPath(path);
     } finally {
       loadInFlight = false;
       if (drainPending) {
@@ -210,5 +236,5 @@ export function createFileLoader({
     })();
   }
 
-  return { pickAndOpen };
+  return { pickAndOpen, openPath };
 }

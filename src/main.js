@@ -5,6 +5,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { setupExportMenu } from "./export.js";
 import { createFileLoader } from "./handoff.js";
+import { setupAppMenu } from "./menu.js";
+import { addRecentFile } from "./recent.js";
 import { t, getLocale, setLocale, applyTranslations } from "./i18n.js";
 import { checkAndPromptForUpdate } from "./updater.js";
 import { createUpdaterUi } from "./updater-ui.js";
@@ -80,6 +82,7 @@ function clearDocument() {
   els.printBtn.disabled = true;
   els.exportBtn.disabled = true;
   exportMenu.close();
+  appMenu.refresh();
 }
 
 function showState(name) {
@@ -158,6 +161,7 @@ async function loadBytes(filename, sizeBytes, buffer) {
   els.printBtn.disabled = false;
   els.exportBtn.disabled = false;
   showState("page");
+  appMenu.refresh();
 }
 
 async function openFile(file) {
@@ -175,8 +179,33 @@ async function openFile(file) {
 }
 
 // Path-driven loads (Open dialog + OS file-association handoff) live in their
-// own module; it owns the in-flight guard that serializes them.
-const { pickAndOpen } = createFileLoader({ loadBytes, showError });
+// own module; it owns the in-flight guard that serializes them. Every
+// successfully-read host path lands in the recent-files store and the
+// native menu re-renders its Open Recent submenu.
+const { pickAndOpen, openPath } = createFileLoader({
+  loadBytes,
+  showError,
+  onPathOpened: (path) => {
+    addRecentFile(path);
+    appMenu.refresh();
+  },
+});
+
+// Native window menu (no-op outside the Tauri shell). Declared after the
+// loader/export wiring it dispatches into; refreshed whenever the locale,
+// recent list, or document-loaded state changes.
+const appMenu = setupAppMenu({
+  actions: {
+    open: () => pickAndOpen(),
+    openRecent: (path) => openPath(path),
+    exportTxt: () => exportMenu.exportAs("txt"),
+    exportHtml: () => exportMenu.exportAs("html"),
+    exportPdf: () => exportMenu.exportPdf(),
+    print: () => window.print(),
+  },
+  isDocumentLoaded: () => !!currentDoc,
+});
+appMenu.refresh();
 
 function isUdfFile(file) {
   return file && /\.udf$/i.test(file.name);
@@ -234,6 +263,7 @@ els.errorRetry.addEventListener("click", () => {
 els.langToggle.addEventListener("click", () => {
   setLocale(getLocale() === "tr" ? "en" : "tr");
   refreshLocale();
+  appMenu.refresh();
 });
 
 window.addEventListener("keydown", (e) => {
