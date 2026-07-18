@@ -439,6 +439,19 @@ body {
   line-height: 1.4;
 }
 
+/* Applied by export.js for the duration of html2pdf rasterization.
+   html2canvas photographs the element as-is: the border/shadow/radius
+   would be inked into the PDF as a thin box outline, and the 50px/60px
+   screen padding inflates the element past one A4 page's height budget,
+   spilling a blank trailing page. Zero padding here; the PDF's own
+   margin (buildPdfOptions) provides the whitespace. */
+.page--exporting {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
 .page :where(p) {
   margin: 0;
 }
@@ -704,6 +717,14 @@ body {
    Only the rendered page is visible. Preserved verbatim from the prior
    design — the print path is correct as-is. */
 @media print {
+  /* Zero @page margins suppress the browser's default header/footer
+     (date + title on top, URL + page count on bottom) — Chromium draws
+     them inside the margin band, so no band means no chrome. The page
+     margins move into .page's own print padding instead. */
+  @page {
+    size: A4;
+    margin: 0;
+  }
   body {
     display: block;
     background: #fff;
@@ -725,6 +746,6 @@ body {
     border: none;
     box-shadow: none;
     max-width: none;
-    padding: 0;
+    padding: 15mm 16mm;
   }
 }
