@@ -113,6 +113,11 @@ export function setupAppMenu({
             action: () => actions.print(),
           }),
           await separator(),
+          await MenuItem.new({
+            text: t("menu.checkUpdates"),
+            action: () => actions.checkUpdates(),
+          }),
+          await separator(),
           await PredefinedMenuItem.new({
             item: "Quit",
             text: t("menu.quit"),

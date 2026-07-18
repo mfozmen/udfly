@@ -13,23 +13,33 @@
 // Two seams are injected so the module can be unit-tested in jsdom
 // without a live Tauri runtime:
 //   deps: { isTauriAvailable, check, relaunch }
-//   ui:   { showAvailable(version, onInstall), showError(msg), hide() }
+//   ui:   { showAvailable(version, onInstall), showError(msg),
+//           showUpToDate(), hide() }
 // main.js wires the real implementations from @tauri-apps/plugin-updater
 // and @tauri-apps/plugin-process.
+//
+// interactive: false is the silent boot check described above. true is
+// the menu-triggered path ("Güncellemeleri Denetle") — the user asked a
+// question, so every outcome answers: up to date, check failure, or the
+// same update banner the boot check uses.
 
-export async function checkAndPromptForUpdate({ deps, ui }) {
+export async function checkAndPromptForUpdate({ deps, ui, interactive = false }) {
   if (!deps.isTauriAvailable()) return;
 
   let update;
   try {
     update = await deps.check();
-  } catch {
-    // Network / GitHub / no-manifest failures are silent. Surfacing them
-    // would spam users with errors they can't act on; the next launch
-    // tries again.
+  } catch (cause) {
+    // Boot check: network / GitHub / no-manifest failures are silent —
+    // surfacing them would spam users with errors they can't act on; the
+    // next launch tries again. An explicit menu click gets the failure.
+    if (interactive) ui.showError(cause?.message || String(cause));
     return;
   }
-  if (!update?.available) return;
+  if (!update?.available) {
+    if (interactive) ui.showUpToDate();
+    return;
+  }
 
   ui.showAvailable(update.version, async () => {
     try {
