@@ -367,6 +367,63 @@ test("exportPdf alerts when generatePdf rejects off Tauri", async (t) => {
   );
 });
 
+// --- Export rasterization styling ------------------------------------------
+
+// html2canvas photographs the .page element as-is, so its screen chrome
+// (border, shadow, radius, padding) would end up inked into the PDF — the
+// "thin line" artifact — and the extra padding height spills a mostly
+// blank second page. The exporter marks the element with .page--exporting
+// for the duration of rasterization so print-clean CSS applies, and always
+// removes it afterwards.
+
+test("exportPdf marks the page element as exporting only during rasterization", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const seen = [];
+  const { exportPdf, page } = mountExportMenu(t, {
+    doc: { parsed, filename: "x.udf" },
+    savePath: "/out/x.pdf",
+    generatePdfBytes: async (element) => {
+      seen.push(element.classList.contains("page--exporting"));
+      return new Uint8Array([1]);
+    },
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.deepEqual(seen, [true], "class present while html2pdf rasterizes");
+  assert.equal(page.classList.contains("page--exporting"), false, "removed after");
+});
+
+test("exportPdf removes the exporting mark even when rasterization fails", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { exportPdf, page, alertCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "x.udf" },
+    savePath: "/out/x.pdf",
+    generatePdfBytes: async () => {
+      throw new Error("html2canvas exploded");
+    },
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(alertCalls.length, 1);
+  assert.equal(page.classList.contains("page--exporting"), false);
+});
+
+test("exportPdf marks the page element during the browser fallback too", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const seen = [];
+  const { exportPdf, page } = mountExportMenu(t, {
+    doc: { parsed, filename: "x.udf" },
+    isTauriAvailable: () => false,
+    generatePdf: async (element) => {
+      seen.push(element.classList.contains("page--exporting"));
+    },
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.deepEqual(seen, [true]);
+  assert.equal(page.classList.contains("page--exporting"), false);
+});
+
 // --- Browser fallback (no Tauri runtime) -----------------------------------
 
 test("exportAs TXT triggers browser-save when Tauri is unavailable", async (t) => {
