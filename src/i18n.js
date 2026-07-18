@@ -29,6 +29,13 @@ export const translations = {
     "topbar.print.aria": "Yazdır (Ctrl+P)",
     "topbar.lang.toggle.aria": "Dili değiştir (şu an Türkçe)",
 
+    // --- native window menu ---
+    "menu.file": "Dosya",
+    "menu.openRecent": "Son Açılanlar",
+    "menu.openRecent.empty": "(Boş)",
+    "menu.openRecent.clear": "Listeyi Temizle",
+    "menu.quit": "Çıkış",
+
     // --- empty / error / drop ---
     "empty.title": "Başlamak için bir .udf dosyası bırakın",
     "empty.hint.prefix": "veya açmak için",
@@ -72,6 +79,13 @@ export const translations = {
     "topbar.print": "Print",
     "topbar.print.aria": "Print (Ctrl+P)",
     "topbar.lang.toggle.aria": "Switch language (currently English)",
+
+    // --- native window menu ---
+    "menu.file": "File",
+    "menu.openRecent": "Open Recent",
+    "menu.openRecent.empty": "(Empty)",
+    "menu.openRecent.clear": "Clear List",
+    "menu.quit": "Exit",
 
     // --- empty / error / drop ---
     "empty.title": "Drop a .udf file to begin",
