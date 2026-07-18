@@ -130,41 +130,18 @@ body {
 }
 
 /* ===== Topbar =====
-   Three-column grid: brand (icon + wordmark) | filename | actions.
-   The wordmark is lowercase 'udfly' — matches the repo brand and reads
-   warmer than 'Udfly'. The brand mark is the app icon at 22px; on light
-   bg we show the light variant, on dark the dark variant. */
+   Two-column grid: filename | actions. No in-app brand block — the native
+   window titlebar already shows the app icon and name directly above, and
+   repeating them here read as a duplicate. */
 .topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 24px;
   padding: 0 16px;
   background-color: var(--color-chrome-bg);
   border-bottom: 1px solid var(--color-border);
   user-select: none;
-}
-
-.topbar__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Transparent-background mark glyph (red U + paper plane). The same mark
-   reads on light and dark chrome because it's a saturated red on alpha. */
-.topbar__mark {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-.topbar__title {
-  font-size: 13.5px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  color: var(--color-chrome-fg);
-  font-feature-settings: "ss01", "ss02";
 }
 
 .topbar__filename {
