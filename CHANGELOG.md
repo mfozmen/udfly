@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-18
+
+The window grows real desktop chrome: a native File menu with Open Recent, a manual update check, and an About box replace the custom topbar entirely — and both PDF paths (export and print) now produce clean, artifact-free output.
+
+### Added
+
+- **Native File menu** (Dosya): Aç, Son Açılanlar, Dışa Aktar (TXT/HTML/PDF), Yazdır, Güncellemeleri Denetle, Hakkında, Çıkış — built with the Tauri menu API, localized TR/EN, rebuilt live on locale, recent-list, and document-state changes. Export and Print items enable only while a document is loaded.
+- **Open Recent** (Son Açılanlar): the last ten successfully opened host paths, newest first, deduped, persisted in `localStorage`, with a Listeyi Temizle action. Only path-driven loads (dialog, OS file association, recent clicks) enter the list — drag-dropped browser files carry no host path.
+- **Manual update check** (Güncellemeleri Denetle): runs the same signed-update flow as the silent boot check, but always answers — install banner when an update exists, a dismissable "Udfly güncel" notice when current, and a visible error when the check itself fails.
+- **About dialog** (Hakkında): native message box with the app name, the running version read from the Tauri runtime, the repo URL, and the license.
+
+### Changed
+
+- **Topbar removed.** With the native titlebar carrying the brand and the new menu carrying every action, the custom topbar was a third stacked bar duplicating both. The filename now lives in the OS window title (`dosya.udf — Udfly`), the TR|EN toggle moved to the statusbar's right edge, and the update banner anchors to the window's top edge. Ctrl+O / Ctrl+P keep working.
+
+### Fixed
+
+- **Export as PDF did nothing in the installed app.** `html2pdf`'s `.save()` triggers an `<a download>` blob click that Tauri's WebView layer silently ignores (no download handler is installed); the same code worked in browser dev, which is how it slipped through. The PDF is now produced as bytes and delivered through the native save dialog plus a new `write_file_bytes` command — mirroring the TXT/HTML flow, with a proper save-as dialog as a bonus.
+- **Printed PDFs no longer carry browser header/footer chrome** (date + window title on top, `localhost` + page count on the bottom). Zero `@page` margins remove the band Chromium draws them in; page margins moved into the document's own print padding.
+- **Exported PDFs no longer show a thin box outline or spill a blank trailing page.** html2canvas was photographing the on-screen `.page` chrome — border, shadow, radius, and padding — into the output; a `.page--exporting` class now strips that styling for exactly the rasterization window.
+
 ## [1.2.0] - 2026-05-19
 
 Major feature batch since 1.1.1: the chrome is redesigned around a Turkish-first identity, the app speaks Turkish by default (with an English toggle), exports as PDF, and silently checks for signed updates on every launch.
