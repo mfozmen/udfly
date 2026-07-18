@@ -62,6 +62,7 @@ function mountExportMenu(
     isTauriAvailable = () => true,
     onBrowserSave,
     generatePdf,
+    generatePdfBytes,
   } = {},
 ) {
   const exportBtn = document.createElement("button");
@@ -81,6 +82,7 @@ function mountExportMenu(
   const invokeCalls = [];
   const browserSaveCalls = [];
   const generatePdfCalls = [];
+  const generatePdfBytesCalls = [];
   const alertCalls = [];
   const realAlert = window.alert;
   window.alert = (msg) => alertCalls.push(msg);
@@ -111,6 +113,12 @@ function mountExportMenu(
       generatePdf ||
       (async (element, filename) =>
         generatePdfCalls.push({ tagName: element.tagName, id: element.id, filename })),
+    generatePdfBytes:
+      generatePdfBytes ||
+      (async (element) => {
+        generatePdfBytesCalls.push({ tagName: element.tagName, id: element.id });
+        return new Uint8Array([1, 2, 3]);
+      }),
   });
   return {
     exportTxt,
@@ -121,6 +129,7 @@ function mountExportMenu(
     invokeCalls,
     browserSaveCalls,
     generatePdfCalls,
+    generatePdfBytesCalls,
     alertCalls,
   };
 }
@@ -247,17 +256,80 @@ test("buildPdfOptions threads the filename through", () => {
 
 // --- Export as PDF ----------------------------------------------------------
 
-test("exportPdf hands the page element and a .pdf filename to generatePdf", async (t) => {
+// Inside the Tauri shell the browser-download path html2pdf's .save() uses
+// (<a download> on a blob URL) is silently ignored by wry — no download
+// handler is installed. The PDF must instead be produced as bytes and routed
+// through the same native save-dialog + Rust write flow TXT/HTML use.
+
+test("exportPdf on Tauri writes PDF bytes to the path the save dialog returns", async (t) => {
   const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
-  const { exportPdf, page, generatePdfCalls } = mountExportMenu(t, {
-    doc: { parsed, filename: "dilekce.udf" },
+  const { exportPdf, page, saveCalls, invokeCalls, generatePdfBytesCalls, generatePdfCalls } =
+    mountExportMenu(t, {
+      doc: { parsed, filename: "dilekce.udf" },
+      savePath: "/out/dilekce.pdf",
+    });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(saveCalls.length, 1);
+  assert.equal(saveCalls[0].defaultPath, "dilekce.pdf");
+  assert.deepEqual(saveCalls[0].filters, [
+    { name: "PDF Document", extensions: ["pdf"] },
+  ]);
+  // Bytes are rasterized from the .page subtree — a visually faithful copy
+  // of what the user is reading.
+  assert.equal(generatePdfBytesCalls.length, 1);
+  assert.equal(generatePdfBytesCalls[0].id, "page");
+  assert.equal(generatePdfBytesCalls[0].tagName, page.tagName);
+  // Plain number array: Uint8Array JSON-stringifies to an object, which
+  // serde's Vec<u8> rejects — the invoke payload must already be an Array.
+  assert.deepEqual(invokeCalls, [
+    ["write_file_bytes", { path: "/out/dilekce.pdf", contents: [1, 2, 3] }],
+  ]);
+  assert.equal(generatePdfCalls.length, 0, "no browser download path on Tauri");
+});
+
+test("exportPdf on Tauri generates nothing when the user cancels the save dialog", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { exportPdf, saveCalls, invokeCalls, generatePdfBytesCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "x.udf" },
+    savePath: null,
   });
   exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await flush();
+  assert.equal(saveCalls.length, 1, "save dialog still shown");
+  assert.equal(generatePdfBytesCalls.length, 0, "no rasterization after cancel");
+  assert.equal(invokeCalls.length, 0, "no write after cancel");
+});
+
+test("exportPdf on Tauri alerts when PDF generation rejects", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { exportPdf, invokeCalls, alertCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "x.udf" },
+    savePath: "/out/x.pdf",
+    generatePdfBytes: async () => {
+      throw new Error("html2canvas exploded");
+    },
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(invokeCalls.length, 0, "no write when rasterization fails");
+  assert.equal(alertCalls.length, 1);
+  assert.equal(
+    alertCalls[0],
+    tr("alert.pdfExportFailed", { cause: "html2canvas exploded" }),
+  );
+});
+
+test("exportPdf hands the page element and a .pdf filename to generatePdf off Tauri", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { exportPdf, page, generatePdfCalls, saveCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "dilekce.udf" },
+    isTauriAvailable: () => false,
+  });
+  exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await flush();
+  assert.equal(saveCalls.length, 0, "no Tauri save dialog when bridge is missing");
   assert.equal(generatePdfCalls.length, 1);
-  // The PDF is rasterized from the .page subtree, not from raw parsed
-  // text — that's how html2pdf.js produces a visually faithful copy of
-  // what the user is reading.
   assert.equal(generatePdfCalls[0].id, "page");
   assert.equal(generatePdfCalls[0].tagName, page.tagName);
   // Filename derived from the source .udf name with .pdf extension, the
@@ -266,16 +338,21 @@ test("exportPdf hands the page element and a .pdf filename to generatePdf", asyn
 });
 
 test("exportPdf is a no-op when no document is loaded", async (t) => {
-  const { exportPdf, generatePdfCalls } = mountExportMenu(t, { doc: null });
+  const { exportPdf, generatePdfCalls, generatePdfBytesCalls, saveCalls } = mountExportMenu(t, {
+    doc: null,
+  });
   exportPdf.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await flush();
   assert.equal(generatePdfCalls.length, 0);
+  assert.equal(generatePdfBytesCalls.length, 0);
+  assert.equal(saveCalls.length, 0);
 });
 
-test("exportPdf alerts when generatePdf rejects", async (t) => {
+test("exportPdf alerts when generatePdf rejects off Tauri", async (t) => {
   const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
   const { exportPdf, alertCalls } = mountExportMenu(t, {
     doc: { parsed, filename: "x.udf" },
+    isTauriAvailable: () => false,
     generatePdf: async () => {
       throw new Error("html2pdf exploded");
     },
