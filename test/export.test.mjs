@@ -93,7 +93,7 @@ function mountExportMenu(
     page.remove();
   });
 
-  setupExportMenu({
+  const api = setupExportMenu({
     els: { exportBtn, exportMenu, exportTxt, exportHtml, exportPdf, page },
     getDocument: () => doc,
     saveDialog:
@@ -121,6 +121,7 @@ function mountExportMenu(
       }),
   });
   return {
+    api,
     exportTxt,
     exportHtml,
     exportPdf,
@@ -414,6 +415,36 @@ test("exportAs browser-save is a no-op when no document is loaded", async (t) =>
   exportTxt.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await flush();
   assert.equal(browserSaveCalls.length, 0);
+});
+
+// --- Native-menu entry points ----------------------------------------------
+
+// The native File menu triggers the same exports as the topbar dropdown;
+// setupExportMenu exposes them so main.js can wire menu items without
+// synthesizing DOM clicks.
+
+test("setupExportMenu exposes exportAs for the native menu", async (t) => {
+  const parsed = { text: "menu text", pages: 1, properties: {}, elements: [] };
+  const { api, invokeCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "dilekce.udf" },
+    savePath: "/out/dilekce.txt",
+  });
+  await api.exportAs("txt");
+  assert.deepEqual(invokeCalls, [
+    ["write_file_text", { path: "/out/dilekce.txt", contents: "menu text" }],
+  ]);
+});
+
+test("setupExportMenu exposes exportPdf for the native menu", async (t) => {
+  const parsed = { text: "x", pages: 1, properties: {}, elements: [] };
+  const { api, invokeCalls } = mountExportMenu(t, {
+    doc: { parsed, filename: "dilekce.udf" },
+    savePath: "/out/dilekce.pdf",
+  });
+  await api.exportPdf();
+  assert.deepEqual(invokeCalls, [
+    ["write_file_bytes", { path: "/out/dilekce.pdf", contents: [1, 2, 3] }],
+  ]);
 });
 
 test("defaultExportName swaps a .udf suffix for the target extension", () => {
