@@ -35,6 +35,7 @@ export const translations = {
     "menu.openRecent.empty": "(Boş)",
     "menu.openRecent.clear": "Listeyi Temizle",
     "menu.quit": "Çıkış",
+    "menu.checkUpdates": "Güncellemeleri Denetle",
 
     // --- empty / error / drop ---
     "empty.title": "Başlamak için bir .udf dosyası bırakın",
@@ -67,6 +68,7 @@ export const translations = {
     "updater.dismiss.aria": "Güncellemeyi yok say",
     "updater.installing": "Yükleniyor…",
     "updater.failed": "Güncelleme başarısız: {cause}",
+    "updater.upToDate": "Udfly güncel — en son sürümü kullanıyorsunuz",
   },
   en: {
     // --- topbar ---
@@ -86,6 +88,7 @@ export const translations = {
     "menu.openRecent.empty": "(Empty)",
     "menu.openRecent.clear": "Clear List",
     "menu.quit": "Exit",
+    "menu.checkUpdates": "Check for Updates",
 
     // --- empty / error / drop ---
     "empty.title": "Drop a .udf file to begin",
@@ -118,6 +121,7 @@ export const translations = {
     "updater.dismiss.aria": "Dismiss update",
     "updater.installing": "Installing…",
     "updater.failed": "Update failed: {cause}",
+    "updater.upToDate": "Udfly is up to date — you are on the latest version",
   },
 };
 

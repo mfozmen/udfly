@@ -25,6 +25,7 @@ function harness({
   const calls = {
     showAvailable: [],
     showError: [],
+    showUpToDate: [],
     hide: [],
     downloadAndInstall: [],
     relaunch: [],
@@ -33,6 +34,7 @@ function harness({
     showAvailable: (version, onInstall) =>
       calls.showAvailable.push({ version, onInstall }),
     showError: (msg) => calls.showError.push(msg),
+    showUpToDate: () => calls.showUpToDate.push(true),
     hide: () => calls.hide.push(true),
   };
   const deps = {
@@ -88,6 +90,57 @@ test("checkAndPromptForUpdate does nothing when no update is available", async (
   await checkAndPromptForUpdate({ deps, ui });
   await flush();
   assert.equal(calls.showAvailable.length, 0);
+});
+
+// --- interactive (menu-triggered) checks -----------------------------------
+
+// The boot-time check is best-effort and silent, but a user who clicks
+// "Güncellemeleri Denetle" asked a question and deserves an answer in
+// every outcome: update found (same banner flow), already up to date,
+// or the check itself failing.
+
+test("an interactive check reports up-to-date when no update is available", async () => {
+  const { ui, deps, calls } = harness({ check: async () => null });
+  await checkAndPromptForUpdate({ deps, ui, interactive: true });
+  await flush();
+  assert.equal(calls.showUpToDate.length, 1);
+  assert.equal(calls.showAvailable.length, 0);
+  assert.equal(calls.showError.length, 0);
+});
+
+test("an interactive check surfaces check() failures through ui.showError", async () => {
+  const { ui, deps, calls } = harness({
+    check: async () => {
+      throw new Error("network down");
+    },
+  });
+  await checkAndPromptForUpdate({ deps, ui, interactive: true });
+  await flush();
+  assert.equal(calls.showError.length, 1);
+  assert.match(calls.showError[0], /network down/);
+  assert.equal(calls.showUpToDate.length, 0);
+});
+
+test("an interactive check still shows the banner when an update exists", async () => {
+  const { ui, deps, calls } = harness({
+    check: async () => ({
+      available: true,
+      version: "1.3.0",
+      downloadAndInstall: async () => {},
+    }),
+  });
+  await checkAndPromptForUpdate({ deps, ui, interactive: true });
+  await flush();
+  assert.equal(calls.showAvailable.length, 1);
+  assert.equal(calls.showAvailable[0].version, "1.3.0");
+  assert.equal(calls.showUpToDate.length, 0);
+});
+
+test("the silent boot check never calls showUpToDate", async () => {
+  const { ui, deps, calls } = harness({ check: async () => null });
+  await checkAndPromptForUpdate({ deps, ui });
+  await flush();
+  assert.equal(calls.showUpToDate.length, 0, "no up-to-date noise at boot");
 });
 
 // --- update available path ---

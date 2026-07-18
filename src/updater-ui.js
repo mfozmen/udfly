@@ -14,13 +14,14 @@
 import { t } from "./i18n.js";
 
 export function createUpdaterUi(els) {
-  // null on both = banner not currently announcing anything.
+  // All three null/false = banner not currently announcing anything.
   let currentVersion = null;
   let currentError = null;
+  let upToDate = false;
 
   // The headline is runtime-interpolated, so the static data-i18n sweep
-  // can't render it. Called from both showAvailable / showError and from
-  // refreshLocale() when the user toggles TR ↔ EN.
+  // can't render it. Called from showAvailable / showError / showUpToDate
+  // and from refreshLocale() when the user toggles TR ↔ EN.
   function renderMessage() {
     if (currentError !== null) {
       els.updateBannerMessage.textContent = t("updater.failed", {
@@ -30,6 +31,8 @@ export function createUpdaterUi(els) {
       els.updateBannerMessage.textContent = t("updater.available", {
         version: currentVersion,
       });
+    } else if (upToDate) {
+      els.updateBannerMessage.textContent = t("updater.upToDate");
     }
   }
 
@@ -37,7 +40,9 @@ export function createUpdaterUi(els) {
     showAvailable(version, onInstall) {
       currentVersion = version;
       currentError = null;
+      upToDate = false;
       renderMessage();
+      els.updateInstall.hidden = false;
       els.updateInstall.disabled = false;
       els.updateInstall.textContent = t("updater.install");
       els.updateBanner.hidden = false;
@@ -50,11 +55,28 @@ export function createUpdaterUi(els) {
         els.updateBanner.hidden = true;
         currentVersion = null;
         currentError = null;
+        upToDate = false;
+      };
+    },
+    // Answer to a menu-triggered check when there's nothing to install:
+    // same banner, no install button — just the message and dismiss.
+    showUpToDate() {
+      currentVersion = null;
+      currentError = null;
+      upToDate = true;
+      renderMessage();
+      els.updateInstall.hidden = true;
+      els.updateBanner.hidden = false;
+      els.updateDismiss.onclick = () => {
+        els.updateBanner.hidden = true;
+        upToDate = false;
       };
     },
     showError(cause) {
       currentError = cause;
+      upToDate = false;
       renderMessage();
+      els.updateInstall.hidden = false;
       // Defensive: the normal flow has the banner already visible from
       // showAvailable, but a future code path (or a race that hides it
       // before the install error fires) would otherwise write the error
@@ -68,6 +90,7 @@ export function createUpdaterUi(els) {
       els.updateBanner.hidden = true;
       currentVersion = null;
       currentError = null;
+      upToDate = false;
     },
     // Hook for main.js's refreshLocale() to re-render the version /
     // failure message in the new language. No-op when the banner is

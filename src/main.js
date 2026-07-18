@@ -202,6 +202,7 @@ const appMenu = setupAppMenu({
     exportHtml: () => exportMenu.exportAs("html"),
     exportPdf: () => exportMenu.exportPdf(),
     print: () => window.print(),
+    checkUpdates: () => runUpdateCheck({ interactive: true }),
   },
   isDocumentLoaded: () => !!currentDoc,
 });
@@ -280,30 +281,35 @@ window.addEventListener("keydown", (e) => {
 
 showState("empty");
 
-// Auto-update: fire once at boot. updater.js short-circuits when the
-// Tauri runtime isn't available, so this is a no-op in plain Vite dev.
-// In production it asks GitHub Releases via tauri-plugin-updater and,
-// if a newer signed bundle exists, surfaces the banner. The Tauri
-// plugins are dynamic-imported so the bundle stays lean when the check
-// path never runs.
-checkAndPromptForUpdate({
-  deps: {
-    isTauriAvailable: () =>
-      typeof window !== "undefined" &&
-      typeof window.__TAURI_INTERNALS__ !== "undefined",
-    check: async () => {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      return check();
+// Update checks share one deps wiring: the silent best-effort run at boot
+// and the interactive run behind Dosya > Güncellemeleri Denetle. updater.js
+// short-circuits when the Tauri runtime isn't available, so both are no-ops
+// in plain Vite dev. In production they ask GitHub Releases via
+// tauri-plugin-updater and, if a newer signed bundle exists, surface the
+// banner. The Tauri plugins are dynamic-imported so the bundle stays lean
+// when the check path never runs.
+function runUpdateCheck({ interactive = false } = {}) {
+  return checkAndPromptForUpdate({
+    deps: {
+      isTauriAvailable: () =>
+        typeof window !== "undefined" &&
+        typeof window.__TAURI_INTERNALS__ !== "undefined",
+      check: async () => {
+        const { check } = await import("@tauri-apps/plugin-updater");
+        return check();
+      },
+      relaunch: async () => {
+        const { relaunch } = await import("@tauri-apps/plugin-process");
+        await relaunch();
+      },
     },
-    relaunch: async () => {
-      const { relaunch } = await import("@tauri-apps/plugin-process");
-      await relaunch();
-    },
-  },
-  ui: updaterUi,
-}).catch(() => {
-  // The internal try/catch wraps deps.check(), but synchronous throws
-  // from the ui callbacks (DOM not present, etc.) would otherwise escape
-  // as an unhandled rejection. The update path is best-effort; a failure
-  // here must not break the document workflow.
-});
+    ui: updaterUi,
+    interactive,
+  }).catch(() => {
+    // The internal try/catch wraps deps.check(), but synchronous throws
+    // from the ui callbacks (DOM not present, etc.) would otherwise escape
+    // as an unhandled rejection. The update path is best-effort; a failure
+    // here must not break the document workflow.
+  });
+}
+runUpdateCheck();
