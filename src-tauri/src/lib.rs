@@ -42,6 +42,15 @@ fn write_file_text(path: String, contents: String) -> Result<(), String> {
     std::fs::write(&path, contents).map_err(|e| e.to_string())
 }
 
+// Binary sibling of write_file_text, added for the PDF export: the payload
+// arrives as a JSON number array over IPC (fine at the ~1 MB scale of a
+// rasterized A4 document) and lands on disk verbatim. Same dialog-bounded
+// authority model as the text variant.
+#[tauri::command]
+fn write_file_bytes(path: String, contents: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, contents).map_err(|e| e.to_string())
+}
+
 // Pop the next queued path the OS has handed us. Frontend calls this on
 // startup (so a Windows / Linux argv path is consumed) and on each
 // udfly://path-available event (so macOS Apple-Event paths that
@@ -73,6 +82,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_file_bytes,
             write_file_text,
+            write_file_bytes,
             take_pending_path
         ])
         .build(tauri::generate_context!())

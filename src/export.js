@@ -44,6 +44,20 @@ async function defaultGeneratePdf(element, filename) {
   return html2pdf().from(element).set(buildPdfOptions(filename)).save();
 }
 
+// Tauri-shell PDF generator: same html2pdf pipeline, but the result is
+// returned as bytes instead of handed to the browser's download machinery.
+// wry installs no download handler, so the <a download> click .save()
+// performs is silently ignored inside the Tauri WebView — the bytes must
+// go through the native save dialog + Rust write instead.
+async function defaultGeneratePdfBytes(element, filename) {
+  const { default: html2pdf } = await import("html2pdf.js");
+  const buffer = await html2pdf()
+    .from(element)
+    .set(buildPdfOptions(filename))
+    .outputPdf("arraybuffer");
+  return new Uint8Array(buffer);
+}
+
 // Detect whether we're running inside the Tauri shell. Tauri injects
 // __TAURI_INTERNALS__ on window before the frontend mounts; its absence
 // means the page is being served by plain Vite (npm run dev) or another
@@ -131,6 +145,7 @@ export function setupExportMenu({
   isTauriAvailable = defaultIsTauriAvailable,
   onBrowserSave = defaultBrowserSave,
   generatePdf = defaultGeneratePdf,
+  generatePdfBytes = defaultGeneratePdfBytes,
 }) {
   function open() {
     els.exportMenu.hidden = false;
@@ -218,23 +233,57 @@ export function setupExportMenu({
     }
   }
 
-  // Export-as-PDF differs from TXT/HTML: there's no bytes-to-disk step on
-  // either Tauri or browser, because html2pdf renders the .page subtree
-  // through html2canvas and triggers the browser's own download. The same
-  // <a download> mechanism the Blob fallback uses for TXT/HTML works here
-  // too, so no separate Tauri path is needed. The result is an image-based
-  // PDF — visually identical to what's on screen, but not text-searchable.
-  // That trade was the user's call; searchability would need either a
-  // jsPDF vector-text pipeline (with font embedding) or a Rust-side
-  // webview print-to-pdf, both significantly more work.
+  // Export-as-PDF renders the .page subtree through html2pdf/html2canvas —
+  // an image-based PDF, visually identical to what's on screen but not
+  // text-searchable. That trade was the user's call; searchability would
+  // need either a jsPDF vector-text pipeline (with font embedding) or a
+  // Rust-side webview print-to-pdf, both significantly more work.
+  //
+  // The delivery differs per host. In a plain browser html2pdf's own
+  // .save() (an <a download> blob click) works. Inside the Tauri shell wry
+  // ignores that click — no download handler is installed — so the PDF is
+  // produced as bytes and routed through the same native save-dialog +
+  // Rust write flow TXT/HTML use. Dialog first, rasterize second: the
+  // dialog is instant while html2canvas can take seconds, and a cancel
+  // should cost nothing.
   async function exportPdf() {
     const doc = getDocument();
     if (!doc || !doc.parsed) return;
     const filename = defaultExportName(doc.filename, "pdf");
+
+    if (!isTauriAvailable()) {
+      try {
+        await generatePdf(els.page, filename);
+      } catch (cause) {
+        window.alert(t("alert.pdfExportFailed", { cause: cause.message || cause }));
+      }
+      return;
+    }
+
+    let path;
     try {
-      await generatePdf(els.page, filename);
+      path = await saveDialog({
+        defaultPath: filename,
+        filters: [{ name: "PDF Document", extensions: ["pdf"] }],
+      });
+    } catch (cause) {
+      window.alert(t("alert.exportFailed", { cause: cause.message || cause }));
+      return;
+    }
+    if (!path) return; // user canceled the save picker
+    let bytes;
+    try {
+      bytes = await generatePdfBytes(els.page, filename);
     } catch (cause) {
       window.alert(t("alert.pdfExportFailed", { cause: cause.message || cause }));
+      return;
+    }
+    try {
+      // Plain number array: Uint8Array JSON-stringifies to an object,
+      // which serde's Vec<u8> rejects.
+      await invoke("write_file_bytes", { path, contents: Array.from(bytes) });
+    } catch (cause) {
+      window.alert(t("alert.saveFailed", { cause }));
     }
   }
 
